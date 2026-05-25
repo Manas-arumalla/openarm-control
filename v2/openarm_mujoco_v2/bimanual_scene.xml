@@ -1,0 +1,126 @@
+<!--
+Copyright 2026 Enactic, Inc.
+Licensed under the Apache License, Version 2.0 (the "License").
+
+Bimanual scene: wide table with blocks + bins on BOTH sides so the two arms can
+work simultaneously. Right arm handles the y<0 side, left arm the y>0 side.
+Grasp welds connect EACH arm to EVERY block (so blocks can also be handed off).
+-->
+
+<mujoco model="openarm_v20_bimanual_scene">
+  <compiler meshdir="assets" angle="radian"/>
+
+  <default>
+    <default class="visual">
+      <geom contype="0" conaffinity="0" group="2" />
+    </default>
+    <default class="collision">
+      <geom condim="3" conaffinity="1" priority="1" group="3" solref="0.005 1" friction="1 0.01 0.01" />
+    </default>
+  </default>
+
+  <statistic center="0 0 0.8" extent="1.2" meansize="0.05"/>
+  <option timestep="0.001" />
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="160" elevation="-10"/>
+    <quality shadowsize="8192"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+      markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+
+    <mesh name="body_link0"      content_type="model/stl" file="visual/body/body_link0.stl"        scale="0.001 0.001 0.001" />
+    <mesh name="body_link0_symp" content_type="model/stl" file="collision/body_link0_symp.stl"    scale="0.001 0.001 0.001" />
+
+    <model name="bimanual" file="openarm_v20_bimanual.xml"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 2" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+
+    <geom name="openarm_body_link0_visual"    type="mesh" mesh="body_link0"      class="visual"    material="openarm_body_link0_material" />
+    <geom name="openarm_body_link0_collision" type="mesh" mesh="body_link0_symp" class="collision" />
+
+    <frame pos="0 0 0.698">
+      <attach model="bimanual" prefix=""/>
+    </frame>
+
+    <!-- Wide shared table (y in [-0.47, 0.47]), top z=0.40 -->
+    <body name="table" pos="0.27 0.0 0.36">
+      <geom name="table_top" type="box" size="0.20 0.47 0.04" rgba="0.82 0.71 0.55 1"
+            friction="1 0.005 0.0001" contype="1" conaffinity="1" />
+      <geom name="table_leg1" type="cylinder" size="0.02 0.18" pos="0.17  0.44 -0.18" rgba="0.2 0.2 0.2 1" />
+      <geom name="table_leg2" type="cylinder" size="0.02 0.18" pos="-0.17 0.44 -0.18" rgba="0.2 0.2 0.2 1" />
+      <geom name="table_leg3" type="cylinder" size="0.02 0.18" pos="0.17 -0.44 -0.18" rgba="0.2 0.2 0.2 1" />
+      <geom name="table_leg4" type="cylinder" size="0.02 0.18" pos="-0.17 -0.44 -0.18" rgba="0.2 0.2 0.2 1" />
+    </body>
+
+    <!-- Blocks: 2 on the right side (r1,r2), 2 on the left side (l1,l2). -->
+    <body name="block_r1" pos="0.18 -0.16 0.43"><freejoint/>
+      <geom name="block_r1_geom" type="box" size="0.02 0.02 0.03" rgba="0.9 0.2 0.2 1" mass="0.05" friction="2.5 0.1 0.01" contype="1" conaffinity="1"/></body>
+    <body name="block_r2" pos="0.18 -0.30 0.43"><freejoint/>
+      <geom name="block_r2_geom" type="box" size="0.02 0.02 0.03" rgba="0.9 0.5 0.1 1" mass="0.05" friction="2.5 0.1 0.01" contype="1" conaffinity="1"/></body>
+    <body name="block_l1" pos="0.18 0.16 0.43"><freejoint/>
+      <geom name="block_l1_geom" type="box" size="0.02 0.02 0.03" rgba="0.2 0.4 0.9 1" mass="0.05" friction="2.5 0.1 0.01" contype="1" conaffinity="1"/></body>
+    <body name="block_l2" pos="0.18 0.30 0.43"><freejoint/>
+      <geom name="block_l2_geom" type="box" size="0.02 0.02 0.03" rgba="0.2 0.8 0.4 1" mass="0.05" friction="2.5 0.1 0.01" contype="1" conaffinity="1"/></body>
+
+    <!-- Bins: matching the blocks, on each side. -->
+    <body name="bin_r1" pos="0.36 -0.16 0.40">
+      <geom name="bin_r1_floor" type="box" size="0.05 0.05 0.002" rgba="0.9 0.2 0.2 0.4" contype="0" conaffinity="0"/>
+      <geom name="bin_r1_w1" type="box" pos="0 0.05 0.02" size="0.05 0.004 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_r1_w2" type="box" pos="0 -0.05 0.02" size="0.05 0.004 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_r1_w3" type="box" pos="0.05 0 0.02" size="0.004 0.05 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_r1_w4" type="box" pos="-0.05 0 0.02" size="0.004 0.05 0.02" rgba="0.4 0.4 0.4 1"/></body>
+    <body name="bin_r2" pos="0.36 -0.30 0.40">
+      <geom name="bin_r2_floor" type="box" size="0.05 0.05 0.002" rgba="0.9 0.5 0.1 0.4" contype="0" conaffinity="0"/>
+      <geom name="bin_r2_w1" type="box" pos="0 0.05 0.02" size="0.05 0.004 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_r2_w2" type="box" pos="0 -0.05 0.02" size="0.05 0.004 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_r2_w3" type="box" pos="0.05 0 0.02" size="0.004 0.05 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_r2_w4" type="box" pos="-0.05 0 0.02" size="0.004 0.05 0.02" rgba="0.4 0.4 0.4 1"/></body>
+    <body name="bin_l1" pos="0.36 0.16 0.40">
+      <geom name="bin_l1_floor" type="box" size="0.05 0.05 0.002" rgba="0.2 0.4 0.9 0.4" contype="0" conaffinity="0"/>
+      <geom name="bin_l1_w1" type="box" pos="0 0.05 0.02" size="0.05 0.004 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_l1_w2" type="box" pos="0 -0.05 0.02" size="0.05 0.004 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_l1_w3" type="box" pos="0.05 0 0.02" size="0.004 0.05 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_l1_w4" type="box" pos="-0.05 0 0.02" size="0.004 0.05 0.02" rgba="0.4 0.4 0.4 1"/></body>
+    <body name="bin_l2" pos="0.36 0.30 0.40">
+      <geom name="bin_l2_floor" type="box" size="0.05 0.05 0.002" rgba="0.2 0.8 0.4 0.4" contype="0" conaffinity="0"/>
+      <geom name="bin_l2_w1" type="box" pos="0 0.05 0.02" size="0.05 0.004 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_l2_w2" type="box" pos="0 -0.05 0.02" size="0.05 0.004 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_l2_w3" type="box" pos="0.05 0 0.02" size="0.004 0.05 0.02" rgba="0.4 0.4 0.4 1"/>
+      <geom name="bin_l2_w4" type="box" pos="-0.05 0 0.02" size="0.004 0.05 0.02" rgba="0.4 0.4 0.4 1"/></body>
+  </worldbody>
+
+  <keyframe>
+    <!-- nq = left arm(0-8) + right arm(9-17) + 4 block free joints(18-45) = 46.
+         Both arms in symmetric ready hover poses; grippers neutral. -->
+    <key name="ready"
+      qpos="0.61533 -2.68385 0.05937 1.90790 1.57057 0.38434 0.51617 0 0
+            -0.720369 2.27095 0.290977 1.90389 1.23759 0.785149 0.558776 0 0
+            0.18 -0.16 0.43 1 0 0 0
+            0.18 -0.30 0.43 1 0 0 0
+            0.18 0.16 0.43 1 0 0 0
+            0.18 0.30 0.43 1 0 0 0" />
+  </keyframe>
+
+  <!-- Grasp welds: each arm <-> each block (parallel sort + hand-off). -->
+  <equality>
+    <weld name="grasp_right_r1" body1="openarm_right_ee_base_link" body2="block_r1" active="false" solref="0.02 1"/>
+    <weld name="grasp_right_r2" body1="openarm_right_ee_base_link" body2="block_r2" active="false" solref="0.02 1"/>
+    <weld name="grasp_right_l1" body1="openarm_right_ee_base_link" body2="block_l1" active="false" solref="0.02 1"/>
+    <weld name="grasp_right_l2" body1="openarm_right_ee_base_link" body2="block_l2" active="false" solref="0.02 1"/>
+    <weld name="grasp_left_r1"  body1="openarm_left_ee_base_link"  body2="block_r1" active="false" solref="0.02 1"/>
+    <weld name="grasp_left_r2"  body1="openarm_left_ee_base_link"  body2="block_r2" active="false" solref="0.02 1"/>
+    <weld name="grasp_left_l1"  body1="openarm_left_ee_base_link"  body2="block_l1" active="false" solref="0.02 1"/>
+    <weld name="grasp_left_l2"  body1="openarm_left_ee_base_link"  body2="block_l2" active="false" solref="0.02 1"/>
+  </equality>
+
+</mujoco>

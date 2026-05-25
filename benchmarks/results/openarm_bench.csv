@@ -1,0 +1,6 @@
+skill,method,metric,result
+articulated:drawer,classical,opened (mm),76.6
+articulated:door,classical,opened (deg),40.4
+articulated:valve,classical,opened (deg),74.9
+admittance,compliant,contact force (N),27.6
+admittance,rigid,contact force (N),213.1

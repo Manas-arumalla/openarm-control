@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openarm-control"
+version = "0.1.0"
+description = "Control, motion planning, bimanual coordination, and reinforcement learning for the Enactic OpenArm v2 in MuJoCo."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Manas Reddy Arumalla", email = "manasreddyarumalla@gmail.com" }]
+keywords = ["robotics", "mujoco", "manipulation", "motion-planning", "reinforcement-learning", "openarm"]
+dependencies = [
+    "mujoco>=3.6.0",
+    "numpy",
+    "scikit-learn",   # PRM nearest-neighbors
+    "networkx",       # PRM roadmap graph
+]
+
+[project.optional-dependencies]
+rl = ["gymnasium>=1.0", "stable-baselines3>=2.0", "torch"]
+vision = ["opencv-python", "mediapipe"]   # used from Phase C onward
+dev = ["pytest", "ruff"]
+all = ["openarm-control[rl,vision,dev]"]
+
+[project.scripts]
+openarm = "openarm_control.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Manas-arumalla/openarm-control"
+Repository = "https://github.com/Manas-arumalla/openarm-control"
+Documentation = "https://docs.openarm.dev/simulation/mujoco"
+
+# Auto-discover every openarm_control subpackage (contact, agent, planners, rl,
+# vision, imitation, teleop, demos, …) so the install list can't drift.
+[tool.setuptools.packages.find]
+include = ["openarm_control*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# pragmatic defaults; expand as the codebase matures
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]   # line length handled by formatter / line-length above
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

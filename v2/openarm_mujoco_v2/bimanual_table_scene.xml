@@ -1,0 +1,122 @@
+<!--
+Copyright 2026 Enactic, Inc.
+Licensed under the Apache License, Version 2.0 (the "License").
+Interactive bimanual testing table (Phase I): a LARGE table with several objects
+spread across both arms' reach and a bin on each side. Used by the interactive
+playground (`openarm interactive`): the camera detects the objects, the terminal
+lists them, you pick one + a destination, and the dual-arm coordinator does it
+(the nearest arm picks; it hands over if it can't reach the destination).
+
+Objects are simple coloured primitives for now; the real scanned-object meshes
+drop in here later behind the same bodies/welds.
+-->
+
+<mujoco model="openarm_v20_bimanual_table">
+  <compiler meshdir="assets" angle="radian"/>
+
+  <default>
+    <default class="visual">
+      <geom contype="0" conaffinity="0" group="2" />
+    </default>
+    <default class="collision">
+      <geom condim="3" conaffinity="1" priority="1" group="3" solref="0.005 1" friction="1 0.01 0.01" />
+    </default>
+  </default>
+
+  <statistic center="0.28 0 0.55" extent="1.4" meansize="0.05"/>
+  <option timestep="0.002" />
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.4 0.4 0.4" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="150" elevation="-20"/>
+    <quality shadowsize="8192"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.55 0.55 0.58" rgb2="0.2 0.2 0.2" width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.38 0.38 0.4" rgb2="0.3 0.3 0.32"
+      markrgb="0.6 0.6 0.6" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+
+    <mesh name="body_link0"      content_type="model/stl" file="visual/body/body_link0.stl"        scale="0.001 0.001 0.001" />
+    <mesh name="body_link0_symp" content_type="model/stl" file="collision/body_link0_symp.stl"    scale="0.001 0.001 0.001" />
+
+    <model name="bimanual" file="openarm_v20_bimanual.xml"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 2" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+
+    <!-- Top-down camera over the whole large table. -->
+    <camera name="tablecam" pos="0.28 0.0 1.45" xyaxes="1 0 0 0 1 0" fovy="62"/>
+    <camera name="frontcam" pos="1.10 0.0 0.9" xyaxes="0 -1 0 0.3 0 1" fovy="58"/>
+
+    <geom name="openarm_body_link0_visual"    type="mesh" mesh="body_link0"      class="visual"    material="openarm_body_link0_material" />
+    <geom name="openarm_body_link0_collision" type="mesh" mesh="body_link0_symp" class="collision" />
+
+    <frame pos="0 0 0.698">
+      <attach model="bimanual" prefix=""/>
+    </frame>
+
+    <!-- LARGE table: y in [-0.45, 0.45] so objects spread across both arms. -->
+    <body name="table" pos="0.28 0.0 0.36">
+      <geom name="table_top" type="box" size="0.22 0.45 0.04" rgba="0.82 0.71 0.55 1"
+            friction="1 0.005 0.0001" contype="1" conaffinity="1" />
+    </body>
+
+    <!-- Objects spread across the table (distinct colours; each has both arms'
+         welds). Bodies are named block_<colour> so the grasp weld suffix matches.
+         Kept clear of the bins and of both raised arms' top-down camera shadows
+         (|y| <= ~0.20). -->
+    <body name="block_red" pos="0.20 0.20 0.425"><freejoint/>
+      <geom name="block_red_geom" type="box" size="0.025 0.025 0.025" rgba="0.85 0.15 0.15 1" mass="0.05" friction="2.5 0.1 0.01" contype="1" conaffinity="1"/></body>
+    <body name="block_green" pos="0.20 -0.20 0.425"><freejoint/>
+      <geom name="block_green_geom" type="box" size="0.025 0.025 0.025" rgba="0.15 0.7 0.2 1" mass="0.05" friction="2.5 0.1 0.01" contype="1" conaffinity="1"/></body>
+    <body name="block_blue" pos="0.32 0.06 0.425"><freejoint/>
+      <geom name="block_blue_geom" type="box" size="0.025 0.025 0.025" rgba="0.15 0.3 0.85 1" mass="0.05" friction="2.5 0.1 0.01" contype="1" conaffinity="1"/></body>
+    <body name="block_orange" pos="0.32 -0.06 0.425"><freejoint/>
+      <geom name="block_orange_geom" type="box" size="0.025 0.025 0.025" rgba="0.7 0.22 0.03 1" mass="0.05" friction="2.5 0.1 0.01" contype="1" conaffinity="1"/></body>
+
+    <!-- A bin on each side. The left bin is reachable by the left arm, the right
+         bin by the right arm -> cross-side requests trigger a hand-over. -->
+    <body name="bin_left" pos="0.30 0.36 0.40">
+      <geom name="binL_floor" type="box" size="0.07 0.07 0.01" pos="0 0 0.01" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+      <geom name="binL_n" type="box" size="0.07 0.008 0.035" pos="0 0.07 0.035" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+      <geom name="binL_s" type="box" size="0.07 0.008 0.035" pos="0 -0.07 0.035" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+      <geom name="binL_e" type="box" size="0.008 0.07 0.035" pos="0.07 0 0.035" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+      <geom name="binL_w" type="box" size="0.008 0.07 0.035" pos="-0.07 0 0.035" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+    </body>
+    <body name="bin_right" pos="0.30 -0.36 0.40">
+      <geom name="binR_floor" type="box" size="0.07 0.07 0.01" pos="0 0 0.01" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+      <geom name="binR_n" type="box" size="0.07 0.008 0.035" pos="0 0.07 0.035" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+      <geom name="binR_s" type="box" size="0.07 0.008 0.035" pos="0 -0.07 0.035" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+      <geom name="binR_e" type="box" size="0.008 0.07 0.035" pos="0.07 0 0.035" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+      <geom name="binR_w" type="box" size="0.008 0.07 0.035" pos="-0.07 0 0.035" rgba="0.45 0.45 0.5 1" contype="1" conaffinity="1"/>
+    </body>
+  </worldbody>
+
+  <equality>
+    <weld name="grasp_right_red"    body1="openarm_right_ee_base_link" body2="block_red"    active="false" solref="0.02 1"/>
+    <weld name="grasp_left_red"     body1="openarm_left_ee_base_link"  body2="block_red"    active="false" solref="0.02 1"/>
+    <weld name="grasp_right_green"  body1="openarm_right_ee_base_link" body2="block_green"  active="false" solref="0.02 1"/>
+    <weld name="grasp_left_green"   body1="openarm_left_ee_base_link"  body2="block_green"  active="false" solref="0.02 1"/>
+    <weld name="grasp_right_blue"   body1="openarm_right_ee_base_link" body2="block_blue"   active="false" solref="0.02 1"/>
+    <weld name="grasp_left_blue"    body1="openarm_left_ee_base_link"  body2="block_blue"   active="false" solref="0.02 1"/>
+    <weld name="grasp_right_orange" body1="openarm_right_ee_base_link" body2="block_orange" active="false" solref="0.02 1"/>
+    <weld name="grasp_left_orange"  body1="openarm_left_ee_base_link"  body2="block_orange" active="false" solref="0.02 1"/>
+  </equality>
+
+  <keyframe>
+    <!-- nq = left arm(0-8) + right arm(9-17) + 4 blocks x 7 (18-45) = 46. -->
+    <key name="ready"
+      qpos="0.720369 -2.27095 -0.290977 1.90389 -1.23759 -0.785149 -0.558776 0 0
+            -0.720369 2.27095 0.290977 1.90389 1.23759 0.785149 0.558776 0 0
+            0.20 0.20 0.425 1 0 0 0
+            0.20 -0.20 0.425 1 0 0 0
+            0.32 0.06 0.425 1 0 0 0
+            0.32 -0.06 0.425 1 0 0 0" />
+  </keyframe>
+
+</mujoco>

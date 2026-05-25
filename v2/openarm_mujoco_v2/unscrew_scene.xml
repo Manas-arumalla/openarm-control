@@ -1,0 +1,107 @@
+<!--
+Copyright 2026 Enactic, Inc.
+Licensed under the Apache License, Version 2.0 (the "License").
+Single-arm bottle-opening scene (extension phase S2): a bottle held FIXED in a
+stand (a vice/clamp), with a narrow, grippable, THREADED cap. The cap has a turn
+(hinge) joint and a lift (slide) joint coupled by an actuator screw, so rotating it
+makes it rise -- real thread behaviour, and it cannot be knocked off. The RIGHT arm
+alone grasps the cap, unscrews it over several re-gripping bursts, and lifts it
+clear. Because the bottle is clamped (not held by the other arm) there is no
+inter-arm collision and the working arm has full room for a proper multi-turn
+unscrew. (Two 7-DOF arms working at one small bottle unavoidably collide, so the
+holding is done by the stand.) The left arm stays parked.
+-->
+<mujoco model="openarm_v20_unscrew">
+  <compiler meshdir="assets" angle="radian"/>
+
+  <default>
+    <default class="visual"><geom contype="0" conaffinity="0" group="2"/></default>
+    <default class="collision"><geom condim="3" conaffinity="1" priority="1" group="3" solref="0.005 1" friction="1 0.01 0.01"/></default>
+  </default>
+
+  <statistic center="0.30 -0.05 0.55" extent="1.2" meansize="0.05"/>
+  <option timestep="0.002"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.4 0.4 0.4" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="150" elevation="-20"/>
+    <quality shadowsize="8192"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.55 0.55 0.58" rgb2="0.2 0.2 0.2" width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.38 0.38 0.4" rgb2="0.3 0.3 0.32"
+      markrgb="0.6 0.6 0.6" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+
+    <mesh name="body_link0"      content_type="model/stl" file="visual/body/body_link0.stl"     scale="0.001 0.001 0.001"/>
+    <mesh name="body_link0_symp" content_type="model/stl" file="collision/body_link0_symp.stl" scale="0.001 0.001 0.001"/>
+
+    <model name="bimanual" file="openarm_v20_bimanual.xml"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 2" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+
+    <camera name="tablecam" pos="0.30 -0.05 1.25" xyaxes="1 0 0 0 1 0" fovy="58"/>
+    <camera name="frontcam" pos="1.00 -0.05 0.90" xyaxes="0 -1 0 0.3 0 1" fovy="55"/>
+
+    <geom name="openarm_body_link0_visual"    type="mesh" mesh="body_link0"      class="visual"    material="openarm_body_link0_material"/>
+    <geom name="openarm_body_link0_collision" type="mesh" mesh="body_link0_symp" class="collision"/>
+
+    <frame pos="0 0 0.698">
+      <attach model="bimanual" prefix=""/>
+    </frame>
+
+    <body name="table" pos="0.27 0.0 0.36">
+      <geom name="table_top" type="box" size="0.22 0.34 0.04" rgba="0.82 0.71 0.55 1"
+            friction="1 0.005 0.0001" contype="1" conaffinity="1"/>
+    </body>
+
+    <!-- Bottle held FIXED in a stand (no joint = rigidly mounted). A wide stand base
+         + body + narrow neck + a threaded cap the right arm unscrews. -->
+    <body name="bottle" pos="0.30 -0.08 0.40">
+      <geom name="stand_base" type="cylinder" fromto="0 0 0 0 0 0.015" size="0.075" mass="0"
+            rgba="0.25 0.25 0.28 1" contype="1" conaffinity="1"/>
+      <geom name="bottle_body" type="cylinder" fromto="0 0 0.015 0 0 0.07" size="0.05" mass="0"
+            rgba="0.4 0.5 0.62 1" contype="1" conaffinity="1"/>
+      <geom name="bottle_neck" type="cylinder" fromto="0 0 0.07 0 0 0.088" size="0.022" mass="0"
+            rgba="0.4 0.5 0.62 1" contype="1" conaffinity="1"/>
+      <body name="cap" pos="0 0 0.088">
+        <joint name="cap_turn" type="hinge" axis="0 0 1" damping="0.1" frictionloss="0.02"/>
+        <joint name="cap_lift" type="slide" axis="0 0 1" range="0 0.12" damping="0.1" frictionloss="0.02"/>
+        <!-- the lid caps the neck; a narrow knob on top is what the gripper pinches
+             with its fingertips (only the tips touch the cap). -->
+        <geom name="cap_geom" type="cylinder" fromto="0 0 0 0 0 0.018" size="0.026" mass="0.06"
+              rgba="0.8 0.45 0.2 1" friction="0.3 0.01 0.01" contype="1" conaffinity="1"/>
+        <geom name="cap_knob" type="cylinder" fromto="0 0 0.018 0 0 0.05" size="0.009" mass="0.02"
+              rgba="0.7 0.4 0.18 1" friction="0.6 0.01 0.01" contype="1" conaffinity="1"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <equality>
+    <weld name="grasp_right_cap" body1="openarm_right_ee_base_link" body2="cap" active="false" solref="0.006 1"/>
+  </equality>
+
+  <!-- Driven screw: the right wrist physically turns the cap via the grasp weld
+       (re-gripping over several bursts, like a human), its reaction absorbed by the
+       clamped bottle; this lift actuator provides the coupled rise (lift = pitch*turn)
+       and holds the cap's height between re-grips. (Actuating the turn is unstable at
+       this cap inertia/timestep, so the wrist drives it.) -->
+  <actuator>
+    <position name="cap_lift_drive" joint="cap_lift" kp="200" kv="7.0" ctrlrange="0 0.12"/>
+  </actuator>
+
+  <keyframe>
+    <!-- nq = left arm(0-8) + right arm(9-17) + cap_turn(18) + cap_lift(19) = 20.
+         Both arms raised/mirrored; left arm parked; cap screwed down. -->
+    <key name="ready"
+      qpos="0 0 0 0 0 0 0 0 0
+            -0.720369 2.27095 0.290977 1.90389 1.23759 0.785149 0.558776 0 0
+            0 0"/>
+  </keyframe>
+
+</mujoco>

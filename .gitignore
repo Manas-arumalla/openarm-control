@@ -1,0 +1,91 @@
+# Copyright 2025 Enactic, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ---------------------------------------------------------------------------
+# Python / packaging
+# ---------------------------------------------------------------------------
+.DS_Store
+__pycache__/
+*.pyc
+*.egg-info/
+**/tmp/*
+build/
+dist/
+
+# ---------------------------------------------------------------------------
+# Tooling caches & virtual envs
+# ---------------------------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------------------
+# Editor / OS cruft
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.code-workspace
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Training artifacts, logs, run outputs
+# ---------------------------------------------------------------------------
+openarm_control/rl/models/
+runs/
+logs/
+tensorboard/
+*.zip
+*.log
+MUJOCO_LOG.TXT
+
+# ---------------------------------------------------------------------------
+# Large pretrained model weights — fetched on demand (see docs/MODELS.md).
+# These are third-party, auto-downloadable, and too big to version.
+# NOTE: .gitignore has NO inline comments — patterns must be bare on their own line.
+# ---------------------------------------------------------------------------
+# mobileclip_blt.ts  (~572 MB MobileCLIP TorchScript, YOLOE backbone)
+mobileclip_blt.ts
+# yolov8s-world.pt   (~26 MB YOLO-World open-vocab detector)
+yolov8s-world.pt
+# yoloe-11s-seg.pt   (~27 MB YOLOE segmentation detector)
+yoloe-11s-seg.pt
+
+# ---------------------------------------------------------------------------
+# Regenerable demo datasets (recreate with `openarm bc-collect ...`).
+# The small trained policies (demos/*.pt) ARE versioned so eval runs out-of-box.
+# ---------------------------------------------------------------------------
+demos/*.npz
+
+# ---------------------------------------------------------------------------
+# Older upstream OpenArm model trees (~50 MB), kept locally for provenance but
+# unused by the code — only v2/ is referenced. Excluded so the public repo ships
+# just the active model. Recoverable from docs.openarm.dev. Reversible: delete
+# these two lines to publish them.
+# ---------------------------------------------------------------------------
+v0.3/
+v1/
+
+# Video renders (GIF/PNG showcase media IS versioned; raw video is not)
+*.mp4
+*.gif.tmp
+
+# ---------------------------------------------------------------------------
+# Internal-only docs: kept locally, not part of the public repo.
+# ---------------------------------------------------------------------------
+docs/archive/
+docs/PUBLISHING_CHECKLIST.md
+media/_probe_*.png

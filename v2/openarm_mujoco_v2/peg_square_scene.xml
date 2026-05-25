@@ -1,0 +1,97 @@
+<!--
+Copyright 2026 Enactic, Inc.
+Licensed under the Apache License, Version 2.0 (the "License").
+Square peg-in-hole scene (Phase I, M6): a square-section peg (40 x 40 x 70 mm)
+and a SQUARE socket rotated 30 deg. Between the round peg (no yaw) and the
+rectangular peg (one 180-deg-symmetric alignment), the square peg has 4-fold
+symmetry: it fits the hole at any multiple of 90 deg, so the robot snaps the
+grasp to the nearest reachable {theta, theta+90, theta+180, theta+270} before a
+fixed-yaw vertical descent threads it in.
+-->
+
+<mujoco model="openarm_v20_peg_square">
+  <compiler meshdir="assets" angle="radian"/>
+
+  <default>
+    <default class="visual">
+      <geom contype="0" conaffinity="0" group="2" />
+    </default>
+    <default class="collision">
+      <geom condim="3" conaffinity="1" priority="1" group="3" solref="0.005 1" friction="1 0.01 0.01" />
+    </default>
+  </default>
+
+  <statistic center="0 0 0.6" extent="1.1" meansize="0.05"/>
+  <option timestep="0.002" />
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.4 0.4 0.4" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="150" elevation="-20"/>
+    <quality shadowsize="8192"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.55 0.55 0.58" rgb2="0.2 0.2 0.2" width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.38 0.38 0.4" rgb2="0.3 0.3 0.32"
+      markrgb="0.6 0.6 0.6" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
+
+    <mesh name="body_link0"      content_type="model/stl" file="visual/body/body_link0.stl"        scale="0.001 0.001 0.001" />
+    <mesh name="body_link0_symp" content_type="model/stl" file="collision/body_link0_symp.stl"    scale="0.001 0.001 0.001" />
+
+    <model name="bimanual" file="openarm_v20_bimanual.xml"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 2" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+
+    <camera name="tablecam" pos="0.28 -0.18 1.15" xyaxes="1 0 0 0 1 0" fovy="55"/>
+    <camera name="frontcam" pos="0.95 -0.18 0.85" xyaxes="0 -1 0 0.3 0 1" fovy="50"/>
+
+    <geom name="openarm_body_link0_visual"    type="mesh" mesh="body_link0"      class="visual"    material="openarm_body_link0_material" />
+    <geom name="openarm_body_link0_collision" type="mesh" mesh="body_link0_symp" class="collision" />
+
+    <frame pos="0 0 0.698">
+      <attach model="bimanual" prefix=""/>
+    </frame>
+
+    <!-- Table: top at z=0.40. -->
+    <body name="table" pos="0.27 -0.18 0.36">
+      <geom name="table_top" type="box" size="0.22 0.24 0.04" rgba="0.82 0.71 0.55 1"
+            friction="1 0.005 0.0001" contype="1" conaffinity="1" />
+    </body>
+
+    <!-- Square-section peg (40 x 40 x 70 mm), standing on the table at yaw 0. -->
+    <body name="peg" pos="0.20 -0.08 0.435">
+      <freejoint />
+      <geom name="peg_geom" type="box" size="0.020 0.020 0.035" rgba="0.15 0.3 0.85 1"
+            mass="0.05" friction="2.0 0.1 0.01" contype="1" conaffinity="1" />
+    </body>
+
+    <!-- Square socket ROTATED 30 deg: a 48 x 48 mm inner pocket (4 mm radial
+         clearance to the 40 mm peg), 50 mm walls. The peg fits at any 90-deg
+         multiple, so it must be aligned to the nearest reachable orientation. -->
+    <body name="socket" pos="0.32 -0.22 0.40" euler="0 0 0.5236">
+      <geom name="socket_n" type="box" size="0.032 0.008 0.025" pos="0 0.032 0.025" rgba="0.5 0.5 0.55 1" contype="1" conaffinity="1"/>
+      <geom name="socket_s" type="box" size="0.032 0.008 0.025" pos="0 -0.032 0.025" rgba="0.5 0.5 0.55 1" contype="1" conaffinity="1"/>
+      <geom name="socket_e" type="box" size="0.008 0.032 0.025" pos="0.032 0 0.025" rgba="0.5 0.5 0.55 1" contype="1" conaffinity="1"/>
+      <geom name="socket_w" type="box" size="0.008 0.032 0.025" pos="-0.032 0 0.025" rgba="0.5 0.5 0.55 1" contype="1" conaffinity="1"/>
+      <site name="socket_center" pos="0 0 0.05" size="0.004" rgba="0.9 0.2 0.2 0.6"/>
+    </body>
+  </worldbody>
+
+  <equality>
+    <weld name="grasp_right_peg" body1="openarm_right_ee_base_link" body2="peg" active="false" solref="0.02 1"/>
+  </equality>
+
+  <keyframe>
+    <!-- nq = left arm(0-8) + right arm(9-17) + peg(18-24) = 25. -->
+    <key name="ready"
+      qpos="0.720369 -2.27095 -0.290977 1.90389 -1.23759 -0.785149 -0.558776 0 0
+            -0.720369 2.27095 0.290977 1.90389 1.23759 0.785149 0.558776 0 0
+            0.20 -0.08 0.435 1 0 0 0" />
+  </keyframe>
+
+</mujoco>

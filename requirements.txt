@@ -1,0 +1,10 @@
+# Core (control, planning, bimanual). For extras use:  pip install -e ".[all]"
+mujoco>=3.6.0
+numpy
+scikit-learn
+networkx
+
+# Reinforcement learning (control/rl) — optional, install via  pip install -e ".[rl]"
+gymnasium>=1.0
+stable-baselines3>=2.0
+torch

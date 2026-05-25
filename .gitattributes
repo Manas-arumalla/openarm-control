@@ -1,0 +1,13 @@
+# Normalize text line endings to LF in the repository.
+* text=auto eol=lf
+
+# Treat these as binary — never apply line-ending conversion or text diffs.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.stl  binary
+*.obj  binary
+*.pt   binary
+*.npz  binary
+*.ts   binary

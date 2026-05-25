@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this platform in your work, please cite it as below."
+title: "OpenArm Control & Simulation Platform"
+abstract: >-
+  A control, motion-planning, bimanual-coordination, perception, and learning
+  platform for the Enactic OpenArm v2 (7-DOF x2 + grippers) in MuJoCo. Spans
+  classical control (IK, Cartesian, compliant/admittance), RRT-Connect planning,
+  bimanual coordination with collision-aware hand-over, dynamic catching and
+  throwing, articulated-object and deformable (cloth) manipulation,
+  language-commanded skills, a learned ACT vision policy, a domain-randomized RL
+  insertion suite, and a unified OpenArm-Bench evaluation.
+type: software
+authors:
+  - family-names: "Arumalla"
+    given-names: "Manas Reddy"
+    email: "manasreddyarumalla@gmail.com"
+license: Apache-2.0
+keywords:
+  - robotics
+  - mujoco
+  - manipulation
+  - motion-planning
+  - imitation-learning
+  - reinforcement-learning
+  - openarm
+repository-code: "https://github.com/Manas-arumalla/openarm-control"
