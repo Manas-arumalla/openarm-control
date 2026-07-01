@@ -205,12 +205,18 @@ def _run_balance(kind):
         radius, period = 0.03, 5.0
         duration = 2 * period
     elif kind == "perturb":
+        # LQR needs ~2 s to bring the ball back after a 20-25 cm/s kick, so
+        # kicks are spaced 2.5 s apart: enough for the recovery to be visibly
+        # complete before the next disturbance arrives. 3 kicks in 8 s reads
+        # cleanly at ~30 fps.
         radius, period = 0.0, 5.0
         duration = 8.0
+        perturb_interval = 2.5
+        perturb_speed = 0.20
     else:
         raise ValueError(f"unknown balance kind {kind!r}")
     n = int(duration / m.opt.timestep)
-    next_perturb = 1.6
+    next_perturb = perturb_interval if kind == "perturb" else None
     for k in range(n):
         t = k * m.opt.timestep
         if kind == "circle":
@@ -218,8 +224,8 @@ def _run_balance(kind):
         else:
             tx, ty = 0.0, 0.0
             if t >= next_perturb:
-                _apply_perturbation(bal, 0.25)
-                next_perturb += 1.6
+                _apply_perturbation(bal, perturb_speed)
+                next_perturb += perturb_interval
         bal.step(target_xy=(tx, ty))
         cap.sync()
     hero = cap.grab()
