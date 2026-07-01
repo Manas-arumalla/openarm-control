@@ -16,7 +16,7 @@ Classical control & planning
 Perception, dynamics & learning
     openarm servo                             # visual servoing (see, reach, grab)
     openarm catch [--vision] [--bimanual] [--twoball] [--benchmark [N]]
-    openarm rl-train [--task reach|pick] | rl-eval [--task reach|pick]
+    openarm rl-train [--task reach|pick|insert|balance] | rl-eval [--task reach|pick|insert|balance]
     openarm bc-collect | bc-train | bc-eval [--compare-rl]
     openarm mimic [--webcam] [--bimanual] [--pick] [--preview]
     openarm gen-data [--out DIR --n N]        # auto-labeled synthetic detection data
@@ -60,9 +60,9 @@ COMMANDS = {
     "catch":      ("openarm_control.demos.demo_catch", "Catch a thrown ball (Kalman + MPC interception)",
                    "--vision  --bimanual  --twoball  --benchmark [N]  --throws N  --seed N"),
     "rl-train":   ("openarm_control.rl.train", "Train a SAC policy",
-                   "--task reach|pick|insert  --timesteps N  --eval  --out PATH  --logdir DIR"),
+                   "--task reach|pick|insert|balance  --timesteps N  --eval  --out PATH  --logdir DIR"),
     "rl-eval":    ("openarm_control.rl.eval", "Watch a trained policy",
-                   "--task reach|pick|insert  --model PATH  --episodes N"),
+                   "--task reach|pick|insert|balance  --model PATH  --episodes N"),
     "bc-collect": ("openarm_control.imitation.collect", "Collect scripted demos -> npz dataset (state, or +images for vision policies)",
                    "--task NAME  --episodes N  --seed N  --keep-all  --images  --camera NAME  --img-size N  --out PATH"),
     "device":     ("openarm_control.imitation.device", "Report the training device (CUDA GPU / VRAM, or CPU)", ""),
@@ -93,6 +93,8 @@ COMMANDS = {
                    "--headless"),
     "unscrew":    ("openarm_control.demos.demo_unscrew", "Bottle opening: unscrew a threaded cap on a clamped bottle (multi-turn) and lift it off",
                    "--headless"),
+    "balance":    ("openarm_control.demos.demo_balance", "Ball balancing: keep or track a ping-pong ball on a plate the gripper holds (PD / LQR / MPC + trajectory + perturb)",
+                   "--controller pd|lqr|mpc|both  --trajectory none|circle|figure8  --perturb  --headless  --offset x,y  --duration SEC  --radius M  --period SEC"),
     "articulated":("openarm_control.demos.demo_articulated", "Articulated manipulation: open a drawer / cabinet door, or turn a valve (incl. language commands)",
                    "--task drawer|door|valve  --command \"open the drawer then turn the valve\"  --headless"),
     "interactive":("openarm_control.demos.demo_interactive", "Bimanual playground: detect objects, pick one, dual-arm does it",

@@ -1447,3 +1447,558 @@ summary of what the platform does and how the methods stack up.
 
 **+1 test (150 total).** **Extension roadmap complete** -- F1, F2, S2, S3, cloth, F3,
 I2, S1, I1, E1 all done (I3/TinyVLA deferred: 8.5 GB VRAM is tight for a full VLA).
+
+---
+
+## Octo (vision-language-action) — local fine-tune of a generalist policy
+
+A learned **generalist transformer policy** added beside the existing ACT/BC/RL
+baselines. Octo (Berkeley, 2024) provides a pretrained vision-language-action backbone
+that fine-tunes on a small set of task-specific demonstrations. **Octo-small** (~27 M
+params) is the chosen size: it trains end-to-end on the local 8.5 GB RTX 5060 with
+batch=1 + gradient checkpointing — no cloud GPU required. (Octo-base ~93 M and
+OpenVLA-7 B both need more VRAM; OpenVLA was the original I3 target and is deferred
+again, but the free Colab T4 path remains available as a fallback.)
+
+The pipeline is:
+1. **Collect** scripted RGB+state demos via the existing `bc-collect --images` flow,
+   upgraded to **256×256** frames (Octo's expected input resolution).
+2. **Convert** the npz dataset into the **RLDS / TFDS** format that Octo's fine-tune
+   scripts read.
+3. **Head-only fine-tune** of octo-small on the OpenArm dataset. (Octo's
+   `scripts/finetune.py` exposes three modes — `head_only`, `head_mlp_only`, `full`;
+   it does **not** ship LoRA. `head_only` freezes the transformer backbone and trains
+   only the action head — the lowest-VRAM mode and the right fit for in-domain
+   fine-tuning on a small custom dataset.)
+4. **Evaluate** the resulting policy in `reach_env` / `insert_env` and add a
+   "Octo (vision+language)" row to OpenArm-Bench beside scripted / BC / ACT.
+
+### Scope notes
+- **Stack is dropped from the demo set:** no scripted `StackExpert` exists in
+  `openarm_control/imitation/expert.py` (only ReachExpert + InsertExpert). The fine-tune
+  covers **reach + insert** (~1 000 demos total), still substantial — Octo's fine-tune
+  recipes typically operate on 50–500 demos per task.
+- Demo collection at 256 px (vs. the prior 96 px used for ACT) is a cosmetic resolution
+  bump, not a structural change; the existing `bc-collect` pipeline handles it via the
+  `--img-size 256` flag.
+
+### Smoke verification
+The upgraded `bc-collect` flow at 256 px image render is end-to-end verified —
+5 reach episodes, 159 transitions, all successful, 9.7 s wall-clock. Output schema:
+`obs (N, 23) f32 · act (N, 7) f32 · ep_lens (5,) i64 · images (N, 256, 256, 3) u8`
+— exactly the shape Octo's fine-tune dataloader expects.
+
+### Demo collection
+- **Reach:** 500 episodes attempted → 429 retained (the default `only_success=True`
+  filter dropped 14 % failures), 13 998 transitions, mean episode length 32.6 steps,
+  **13.6 MB compressed** on disk (the sim renders' large flat-colour regions compress
+  exceptionally well — uncompressed would be ~2.7 GB).
+- **Insert:** 500 episodes attempted → **500 retained (100 % success)** — the scripted
+  Cartesian-path expert is deterministic and never fails. 32 500 transitions, mean
+  episode length 65.0 steps, **519 MB compressed** on disk.
+
+**Combined dataset (Octo fine-tune input):** 929 episodes, 46 498 transitions, ~533 MB
+on disk. Plenty for head_only fine-tuning — Octo's recipes typically run on 50–500
+demos per task.
+
+### RLDS / TFDS converter
+**`scripts/openarm_dataset/`** — a TFDS `DatasetBuilder` that wraps the npz files into
+the RLDS schema Octo's `scripts/finetune.py` consumes. Built following the
+`kpertsch/rlds_dataset_builder` template (the convention the Octo team recommends
+for custom datasets). Two tasks are merged into one dataset, each tagged with its
+own `language_instruction` prompt:
+- `"reach the target"` ← `demos/octo_reach.npz`
+- `"insert the peg into the socket"` ← `demos/octo_insert.npz`
+
+Per-step schema: `observation.image (256, 256, 3) u8`, `observation.state (23,) f32`,
+`action (7,) f32`, `language_instruction` (text), plus the standard RLDS episode
+flags (`is_first` / `is_last` / `is_terminal`) and `discount` / `reward`.
+
+Run with `pip install tensorflow tensorflow-datasets`, then
+`cd scripts/openarm_dataset && tfds build` — the dataset materialises under
+`~/tensorflow_datasets/openarm_dataset/1.0.0/` and the Octo finetune script reads it
+by name via its dataset config.
+
+---
+
+## Phase B1 — Ball balancing (PD on a tilted plate)
+
+The classical ball-on-plate stabilisation problem on the OpenArm. A square plate is
+held by the right gripper at a fixed world position; a free ping-pong ball rolls on
+it; the controller tilts the plate (small roll/pitch about world axes) to keep the
+ball at a target xy on the plate surface. Distinct from every existing skill on the
+platform — quasi-static manipulation gives way to **real-time dynamic
+stabilisation**.
+
+### Scene (`v2/openarm_mujoco_v2/balance_scene.xml`)
+- 18-DOF arm (both arms attached) + plate free body + ball free body → `nq = 32`.
+- **Plate:** 15 × 15 × 1 cm box, mass 50 g, `condim=6` rolling-friction contact,
+  stiff critically-damped contact (`solref=0.005 1, solimp=0.95 0.99 0.001`).
+- **Ball:** real ping-pong specs — 40 mm diameter, 2.73 g, sphere geom, same
+  stiff-but-damped contact. With these tunings a freely dropped ball settles
+  in <0.5 s with **0 mm steady-state bounce** (verified by the scene's drop-test
+  probe).
+- `<contact><exclude>` directives between (plate, ball) and the right gripper's
+  collision bodies (`openarm_right_ee_base_link` + the two finger bodies). Without
+  these the welded plate's static interpenetration with the gripper mesh generates
+  enormous constraint-resolution forces every step, which then catapult the ball
+  laterally at contact (observed: 1.3 kN/s impulse on a 3 g ball → ejected at 1.7 m/s).
+
+### Controller (`openarm_control/balance.py`)
+Two-class layout sharing a hold + tilt scaffold; the actual control law goes in
+subclasses. `PDBalancer` is Tier 1; an `LQRBalancer` is planned for Tier 2.
+
+**Hold mechanism — manual pin, not soft weld.** The first implementation used a
+MuJoCo `weld` equality between the gripper and the plate free body. With a 50 g
+plate + stiff contact + the welded constraint solver, the system was
+contact-impulse-unstable: ball-plate collision spikes propagated through the weld
+back into the arm and back into the ball, ejecting the ball even when the plate
+was nominally flat. Switched to **kinematic puppetry**: after every `mj_step`,
+`_pin_plate_to_gripper` snaps the plate's free joint to
+`gripper_pose · stored_relpose` and zeros plate qvel. No constraint solver
+involvement, no impulse spikes, no plate-mass gravity comp needed (plate is purely
+kinematic). The weld is left declared but inactive.
+
+**Reference capture (no IK in setup).** `setup_hold` does NOT run IK to a chosen
+hold pose — that fails silently if the target is unreachable (IK returns its
+best-effort residual config without flagging). Instead it uses the right arm's
+existing `ready` keyframe pose, queries forward kinematics for the achieved tool
+point + orientation, and stashes those as `_hold_pos` / `_R_grip_init`. All later
+control steps re-IK to *those exact values* with `R_tilt @ _R_grip_init` — a zero-
+tilt command then has zero IK residual, so the gripper doesn't drift.
+
+**PD law (signs verified empirically).** With `R_tilt = R_x(roll) · R_y(pitch)`
+pre-multiplied in the world frame: positive pitch → ball accelerates +X; positive
+roll → ball accelerates -Y. To drive the ball back to the target:
+```
+pitch = -KP * (x - target_x) - KD * vx
+roll  = +KP * (y - target_y) + KD * vy
+```
+Default gains `KP = 6.0 rad/m`, `KD = 1.8 rad·s/m`, max tilt 20°. Tilts capped so
+the arm stays well inside joint limits.
+
+### Verified result
+With ball placed at **(+30 mm, +20 mm)** offset on the plate, the PD controller
+converges to **< 1.1 mm** mean error over the last 0.4 s of a 6 s episode (peak
+excursion during recovery: ~53 mm). At the harder **(+40 mm, +25 mm)** start,
+final error 1.86 mm. Repeatable, deterministic.
+
+### CLI + test
+- `openarm balance` — viewer (default `LQR`).
+- `openarm balance --controller pd|lqr|both --headless [--offset x,y]` — scripted
+  report; `both` runs head-to-head.
+- `tests/test_balance.py` — regression tests (scene compiles, hold pins plate
+  horizontally, PD settles, LQR settles + beats PD, LQR gain matrix structure).
+
+### Phase B2 — LQR controller variant
+
+Discrete LQR on the linearised ball-on-plate dynamics, sharing `BallBalancer`'s
+hold + tilt scaffold. The linearised model about the flat-plate equilibrium is:
+
+```
+state x = [px, py, vx, vy]        (ball position + velocity in plate frame)
+input u = [roll, pitch]
+   dpx/dt = vx
+   dpy/dt = vy
+   dvx/dt = +G_EFF · pitch          (G_EFF = 5/7 · g)
+   dvy/dt = -G_EFF · roll
+```
+
+Euler-discretised at the sim timestep (`dt = 2 ms`), the discrete algebraic
+Riccati equation (`scipy.linalg.solve_discrete_are`) gives the infinite-horizon
+gain `K`, and the control law is `u = -K (x - x*)` with the same MAX_TILT clip
+as PD.
+
+**Cost tuning.** Q, R chosen so the resulting gain stays well inside MAX_TILT
+even at 60 mm offsets — an initial LQR draft with an aggressive Q/R saturated
+the tilt, and the arm's finite servo bandwidth means a saturating tilt takes
+several steps to be *achieved*, during which the arm swings *through* the
+wrong intermediate tilt and drives the ball off. Gentler gains
+(`Q = diag(40, 40, 8, 8)`, `R = diag(8, 8)`) keep the commanded tilt within
+the arm's one-step actuator range. Concretely `K[1, 0] ≈ 2.22 rad·m⁻¹`, so a
+60 mm x-offset commands only ~7.6° of pitch — far below the 20° cap.
+
+**Head-to-head vs PD** (100-episode fixed-seed, same offset sweep,
+`openarm balance --controller both`):
+
+| offset       | PD peak / final / RMS         | LQR peak / final / RMS        |
+|---           |---                            |---                            |
+| (30, 20) mm  | 53.3 / 1.04 / 3.54 mm         | **38.6 / 0.39 / 0.65 mm**     |
+| (40, 30) mm  | 61.8 / 1.85 / 6.83 mm         | **53.1 / 0.39 / 0.78 mm**     |
+| (50, 30) mm  | 80.0 / 1.72 / 8.02 mm         | **62.5 / 0.39 / 0.89 mm**     |
+| (60, 40) mm  | both diverge (natural stability limit — the arm can't tilt fast enough) |     |
+
+LQR wins on every measurable axis in the working regime: lower peak excursion,
+~4× lower final steady-state error, ~5-10× lower steady-state RMS. Cleaner
+transients (no PD overshoot) and quieter steady state, at the same tilt cap.
+
+**+2 tests → 155 total.** Full suite green.
+
+### Phase B3 — Trajectory tracking, disturbance rejection, hero GIFs
+
+Two demo scenarios added on top of the static holding case, plus the visual
+geometry redesign that ships in the same pass.
+
+**Trajectory tracking.** `demo_balance` accepts `--trajectory circle|figure8`
+with `--radius` and `--period`. The controllers get a time-varying target
+`(r · cos(ωt), r · sin(ωt))` (or Lissajous 1:2 for figure-8) and the same PD /
+LQR laws drive the ball to follow it. Bounded tracking on both — PD's stiffer
+gains lag less than LQR's softer ones (~11 mm vs ~21 mm mean tracking error at
+3 cm / 5 s circle), a legitimate PD-vs-LQR tradeoff for time-varying references.
+
+**Disturbance rejection.** `--perturb` applies a random-direction ~25 cm/s
+velocity kick to the ball every `--perturb-period` seconds. LQR consistently
+recovers within a few hundred ms; steady-state RMS 7.2 mm vs PD's 14.9 mm.
+
+**Geometry redesign** (in response to a visual-correctness note during Tier 3
+review): the original placement (plate 3 cm above the tool point) put the
+plate at the same z as the gripper's finger collision meshes, so the fingers
+visually appeared to penetrate the plate — even though `<contact><exclude>`
+made the intersection dynamically inert. A palm-up arm keyframe would be the
+ideal fix but is not reachable — link6 shares the palm's world position on
+every joint config, and link4/link5 extend up to z ≈ 0.83.
+
+The fix: place the plate 12 cm above the gripper (`_hold_pos + [0, 0, 0.12]`),
+add a visual-only cylinder geom in the scene XML as a "riser rod" bridging the
+gap, and extend `<contact><exclude>` to cover plate/ball vs. all right-arm
+bodies (`link4`, `link5`, `link6` plus the palm + fingers). The plate now
+visibly sits *above* the arm, connected by a rendered stem — reads as "arm
+holds a table on a stem". Retuned PD gains (`KP=2, KD=1.2`) keep the shorter
+lever arm's tilt-induced plate translation small; LQR's soft gains cope
+unchanged. Perturbation-recovery gate widened from 20 mm to 30 mm to
+accommodate the slightly larger post-kick transient at the new geometry.
+
+**Hero GIFs** rendered via `scripts/gen_showcase_media.py` (new `balance_circle`
+and `balance_perturb` skills): a top-3/4 view of the arm holding the riser +
+plate, showing the LQR tilting the plate to track a circle or recover from
+kicks. Written to `media/balance_circle.gif` (~3.8 MB, 72 frames) and
+`media/balance_perturb.gif` (~3.0 MB, 72 frames).
+
+**+2 tests → 157 total** (`test_circle_trajectory_stays_bounded`,
+`test_perturbation_recovery`). Full suite green.
+
+### Phase B4 — Model-predictive control + OpenArm-Bench entry
+
+Adds a third controller and a formal benchmark row for the balance skill.
+
+**MPCBalancer.** Pure LQR (a regulator) always lags a moving reference because
+it can only react to *current* position error. A finite-horizon MPC on the
+linearised ball-on-plate would derive an anticipatory tilt from the target's
+future trajectory; for a smooth ball-on-plate model that anticipation collapses
+to an **analytic feedforward** from the target acceleration:
+
+```
+pitch_ff = +a_x_ref / G_EFF     (positive pitch -> ball accels +X)
+roll_ff  = -a_y_ref / G_EFF     (positive roll  -> ball accels -Y)
+u        = -K (x - x_ref) + u_ff
+```
+
+Same LQR gain, same cost tuning. The *only* change from `LQRBalancer` is
+`u_ff`. No QP solver, no new dependency. For a static target the feedforward
+is zero and MPC reduces exactly to LQR (verified by
+`test_mpc_settles_ball_like_lqr` — final errors identical to floating-point
+precision).
+
+**Interface.** All three balancers now accept `(target_xy, target_axy)` on
+`step()`. `_target_state_at(t, mode, radius, period)` in `demo_balance.py`
+returns both position and analytic acceleration per trajectory mode (circle:
+`a = -w² · position` from simple harmonic motion; figure-8: same on x,
+`a_y = -(2w)² · y` on the 1:2 Lissajous). PD and LQR ignore `target_axy`; MPC
+uses it. `--controller mpc` (or `--controller both` for the head-to-head
+three-way in `--headless`) is now wired.
+
+**Head-to-head at a fast circle** (r=4 cm, T=2.5 s):
+
+| method | static settle (mm) | circle RMS (mm) |
+|---|---|---|
+| PD  | 0.44 | 40.3 |
+| LQR | 0.39 | 39.2 |
+| **MPC** | 0.39 | **37.7** |
+
+MPC ties LQR on the static case (as it should — `u_ff = 0`) and beats it by
+~4% on the moving-target case. The effect grows with target frequency and
+radius. Modest but real.
+
+**OpenArm-Bench entry.** New `bench_balance` in `benchmarks/openarm_bench.py`
+records both metrics (static final err, circle tracking RMS) for all three
+methods. `plot_openarm_bench.py` gets a new `plot_balance` panel: two side-by-
+side bars showing the PD → LQR → MPC progression on both scenarios. Written
+to `benchmarks/figures/openarm_bench_balance.png`.
+
+**+2 tests → 159 total** (`test_mpc_settles_ball_like_lqr`,
+`test_mpc_beats_or_ties_lqr_on_trajectory`). Full suite green.
+
+### Phase B5 — Learned SAC balancer (classical vs. learned head-to-head)
+
+Fifth column in the balance benchmark: SAC on the same physics/hold as
+PD/LQR/MPC, in two variants — a policy trained end-to-end from scratch, and a
+**residual policy** that learns a small correction on top of an LQR baseline.
+The point of the section is to place model-free RL alongside hand-derived
+classical control on a problem where the linearised model admits a
+closed-form optimal law.
+
+#### Environment
+
+`openarm_control/rl/balance_env.py` (`OpenArmBalanceEnv`) reuses the exact
+`BallBalancer` hold + tilt + manual-pin scaffolding the classical controllers
+already use. Only who chooses `(roll, pitch)` each step changes.
+
+```
+Observation (6):  [x, y, vx, vy, x - tx, y - ty]      ball state + error to target
+Action (2):       [roll, pitch] in [-1, 1] * MAX_TILT (~20°)
+Reward:           - distance
+                  - 0.05 * speed
+                  - 0.001 * |action|
+                  + 0.5 * exp(-(distance / 1 cm)²)     sharp precision bonus
+                  - 5.0 * (ball rolled off plate)      one-shot terminal penalty
+                  + 2.0 * success at end of episode
+Termination:      ball outside 7 cm disk               OR  ≥ 300 steps
+Rate:             100 Hz policy control                5 sim substeps per action (ZOH)
+```
+
+The 6-D observation deliberately includes both the absolute ball position and
+the target-relative error. A scripted LQR policy fed through the env
+(`u = -K · obs[:4]`) hits **3/3 success** on smoke seeds, which validates the
+reward shape before any compute is spent on SAC training.
+
+**Env sanity gate.** `tests/test_rl_balance_env.py` (+3 tests):
+
+- `test_env_spaces_and_reset` — Gymnasium contract (6-D obs, 2-D act, spaces).
+- `test_env_random_action_stays_terminating_or_truncating` — a random-action
+  episode terminates or truncates cleanly (guards against a stuck sim).
+- `test_env_scripted_lqr_policy_succeeds` — scripted LQR through the env wins
+  ≥ 2/3 seeds. Regression gate on the observation layout and reward.
+
+The env is registered as `"balance"` in `openarm_control/rl/TASKS`, so the
+existing training and eval pipeline (SB3 SAC + TensorBoard) works unchanged:
+
+```bash
+openarm rl-train --task balance --timesteps 200000    # ~65 min on CPU
+openarm rl-eval  --task balance                       # watch in the viewer
+```
+
+#### Part 1 — SAC from scratch (200 k timesteps)
+
+Standard SB3 SAC (`lr=3e-4`, `buffer=300k`, `batch=256`, `gamma=0.98`, MLP
+`[256, 256]`) matching the reach hyperparameters. End-to-end ~50 fps
+(env.step ≈ 10 ms plus SB3 update overhead), ≈ 65-70 min on CPU.
+
+Training curve (TensorBoard scalars):
+
+| step | ep_rew_mean | ep_len_mean | success_rate | ent_coef |
+|-----:|------------:|------------:|-------------:|---------:|
+| 150    | -6.4  | 35.8 | 0 % | 0.96 |
+| 20 k   | +0.1  | 48.5 | 0 % | 0.01 |
+| 100 k  | +5.0  | 54.0 | 0 % | 0.02 |
+| 200 k  | +6.7  | 59.1 | 0 % | 0.03 |
+
+The reward climbed from -6.4 to +6.7 and the episode length went from 36 to 59
+steps — the policy **learned survival** (keeping the ball on the plate for
+longer). But the success band (final distance < 20 mm, speed < 5 cm/s) stayed
+at **0 %** across all 200 k steps. The entropy coefficient collapsed to ~0.02
+by step 20 k: the policy locked into a "hold the plate roughly flat" mode
+early and stopped exploring precise centering. Reward shape reads the same
+way — the -5 terminal penalty for dropping the ball dominates the +0.5
+precision bonus for centering it, so surviving is worth much more than
+converging.
+
+Bench integration: `bench_balance` in `benchmarks/openarm_bench.py` loads
+`openarm_control/rl/models/balance_sac.zip` when present and runs it on both
+the static-hold and circle-tracking scenarios. The bench also detects the
+"ball rolled off the plate" failure mode and caps the reported metric at
+100 mm — past plate radius the raw number becomes ball-in-world-frame
+position (this trained SAC's ball ends the 6 s bench episode roughly 4 m
+from the plate) which is accurate but not meaningful for head-to-head
+plotting. `plot_openarm_bench.plot_balance` renders the SAC bar with a red-×
+overlay and a **FAILED (ball off plate)** label whenever the cap is hit.
+
+#### Part 2 — Residual policy over an LQR baseline
+
+The intended pattern from the residual-policy-learning literature
+(Silver et al. 2018, Johannink et al. 2019): a classical baseline
+`u_LQR = -K x` does the bulk of the work, and a learned policy `δ(x)` adds a
+small correction:
+
+```
+u_final = clip( u_LQR(x) + δ(x) * RESIDUAL_MAX_TILT,   ± MAX_TILT )
+```
+
+`openarm_control/rl/balance_residual_env.py` (`OpenArmBalanceResidualEnv`)
+subclasses the base env: same observation, same termination, same reward
+skeleton — only `step()` changes to compose the LQR baseline with a
+±2° residual. `RESIDUAL_MAX_TILT = 2°` is deliberately small: the LQR
+already keeps the ball on the plate from typical initial conditions, so a
+random policy on top adds noise but doesn't blow the task apart. The env is
+registered as `"balance_residual"`.
+
+**Zero-residual smoke.** `test_residual_env_zero_action_equals_lqr` runs the
+env with `action = 0` and requires the LQR baseline to succeed on ≥ 2/3
+seeds. A partner test (`test_residual_env_random_residual_bounded`) checks
+that random residuals produce finite rewards over a short horizon. +2 tests.
+
+**First training run (50 k, no residual regularization).** The reward used
+here has a very small linear action penalty (`-0.001 * |action|`). Training
+started from an excellent position — SAC's initial actor outputs residuals
+near zero, so the LQR baseline is doing essentially all the work. But the
+result was the opposite of what residual learning is supposed to give:
+
+| step | ep_rew_mean | ep_len_mean | success_rate | ent_coef |
+|-----:|------------:|------------:|-------------:|---------:|
+| 1.2 k  |  98.6 | 300 | **100 %** | 0.89 |
+| 7.2 k  |  89.5 | 300 |    96 %   | 0.22 |
+| 19 k   |  68.9 | 299 |    80 %   | 0.01 |
+| 31 k   |  50.7 | 296 |    57 %   | 0.01 |
+| 42 k   |  23.4 | 284 |    23 %   | 0.01 |
+| 49 k   |  16.8 | 267 |    10 %   | 0.01 |
+
+The training actively **unlearned** the LQR baseline. The mechanism is a
+familiar bootstrap failure: SAC's maximum-entropy objective encourages
+non-zero actions; the untrained critic has no signal for which direction is
+good; the actor takes gradient steps that push residuals away from zero into
+random directions; those larger residuals now hurt performance; the critic
+learns *that* off the collected rollouts and the actor keeps drifting. The
+policy ends with 10 % success from a baseline that started at 100 %.
+
+**Second training run (30 k, residual reward reshaped).** Two changes to make
+zero the strong attractor:
+
+- Replace the linear action penalty (`-0.001 · |action|`) with a squared
+  penalty (`-1.0 · |action|²`). A full-scale residual now costs about -300
+  over an episode — more than the baseline reward, so anything but small
+  corrections is strongly punished. Small residuals stay cheap.
+- Double the precision bonus (`+0.5 → +2.0`) so residuals that measurably
+  reduce error at target are rewarded enough to survive the squared cost.
+
+The training run is boringly correct — success rate stays at 100 % from the
+first evaluation window and the reward climbs monotonically as SAC finds
+useful small residuals:
+
+| step | ep_rew_mean | ep_len_mean | success_rate | ent_coef |
+|-----:|------------:|------------:|-------------:|---------:|
+| 1.2 k  | 199 | 300 | 100 % | 0.89 |
+| 6 k    | 254 | 300 | 100 % | 0.22 |
+| 15.6 k | 325 | 300 | 100 % | 0.04 |
+| 30 k   | 372 | 300 | 100 % | 0.03 |
+
+Bench integration adds a **LQR+SAC** column that composes the LQR feedback
+per sim step with the residual policy queried at 100 Hz, mirroring what
+happens inside the env.
+
+#### Head-to-head result
+
+| method | static settle (mm) | circle track RMS (mm) |
+|---|---|---|
+| PD  | 0.44 | 40.3 |
+| LQR | 0.39 | 39.2 |
+| **MPC** | **0.39** | **37.7** |
+| SAC (from scratch) | ✗ ball off plate | ✗ ball off plate |
+| LQR + SAC residual | 5.9 | 43.2 |
+
+Three findings, each independently useful:
+
+1. **From scratch, model-free SAC does not solve this task in 200 k
+   timesteps.** The reward shape as written traps the policy in a
+   survival strategy; it never learns precision. Under bench conditions the
+   ball rolls off the plate within a few seconds.
+2. **Naïve residual RL destroys a good baseline.** With a weak action
+   penalty, SAC's exploration pressure and uninformed critic push a
+   100 %-success LQR baseline down to 10 % over 50 k steps.
+3. **Residual RL with the right regularization does converge, but it does
+   not beat LQR on this plant.** With `-|action|²` regularization the
+   policy holds 100 % success end-to-end and the training curve is
+   monotone, but the learned residual costs ~5 mm of steady-state error
+   on the static-hold protocol and slightly widens the circle-tracking
+   RMS. The linearised ball-on-plate model admits an essentially optimal
+   feedback law in closed form (the LQR itself), so there is nothing for a
+   learned residual to add that improves on it — the same "problem
+   structure is the solution" observation that killed the from-scratch
+   run.
+
+Where a learned residual *would* pay off — modelling gaps the linearisation
+does not capture (unmodelled friction, sensor noise, actuator lag) — is out
+of scope for this simulator's clean rigid-body physics. Model-based RL
+variants (MB-SAC, TD-MPC) that can exploit the smooth dynamics belong in a
+separate study.
+
+Trained SAC models follow the same convention as `reach_sac.zip` — they are
+**not versioned in the repo** (see `.gitignore`). The bench auto-detects
+`openarm_control/rl/models/balance_sac.zip` and
+`openarm_control/rl/models/balance_residual_sac.zip` when present; to fill
+in the SAC / LQR+SAC bench columns, reproduce them with:
+
+```bash
+openarm rl-train --task balance          --timesteps 200000    # ~65 min CPU
+openarm rl-train --task balance_residual --timesteps 30000     # ~15 min CPU
+python benchmarks/openarm_bench.py && python benchmarks/plot_openarm_bench.py
+```
+
+**+5 tests → 164 total** (3 base env tests + 2 residual env tests). Full
+suite green.
+
+### Octo finetune configuration (planned)
+From `scripts/configs/finetune_config.py` in the Octo repo, the override matrix is:
+
+```python
+FINETUNING_KWARGS = {
+    "name": "openarm_dataset",
+    "data_dir": "~/tensorflow_datasets",
+    "image_obs_keys": {"primary": "image", "wrist": None},
+    "proprio_obs_key": "state",
+    "language_key": "language_instruction",
+}
+# Head-only mode freezes the transformer backbone and trains only the action head.
+# Backbone activations still pass through (forward + backward to the head), so VRAM
+# is dominated by activation memory; expect to need batch_size ~16-32 (not the 256
+# default) to fit in 8.5 GB.
+mode = "head_only"          # -> frozen_keys = ("octo_transformer.*",)
+action_horizon = 16          # Octo default is 4; matched to ACT's chunk for fair eval
+window_size = 1
+batch_size = 16              # tuned at runtime to maximise free VRAM
+optimizer = dict(
+    learning_rate=dict(name="cosine", peak_value=3e-4, warmup_steps=2000),
+)
+pretrained_path = "hf://rail-berkeley/octo-small-1.5"
+num_steps = 50_000           # initial target; refine after watching loss
+save_interval = 5_000
+```
+
+The training entry point is `python scripts/finetune.py --config.pretrained_path=... \
+--config.dataset_kwargs.name=openarm_dataset` (plus overrides). The `openarm octo
+train` CLI will be a thin wrapper around this subprocess.
+
+### Runtime: WSL2 required for GPU on Windows
+Octo is **JAX/Flax-based**, and **JAX has no native CUDA support on Windows** — the
+JAX team's official recommendation is **WSL2** for GPU acceleration. The local
+RTX 5060's 8.5 GB VRAM is fully accessible from WSL2 via the Windows NVIDIA driver
+(installed once on the host; CUDA is then auto-stubbed inside WSL2).
+
+The fine-tune path is therefore:
+
+```bash
+# one-time, on Windows (PowerShell as admin)
+wsl --install -d Ubuntu      # installs WSL2 + Ubuntu, reboot once
+# inside WSL2 (Ubuntu)
+sudo apt update && sudo apt install -y python3.11-venv python3-pip
+python3.11 -m venv .venv && . .venv/bin/activate
+pip install --upgrade pip
+pip install "jax[cuda12]" tensorflow tensorflow-datasets        # JAX-CUDA via wheels
+git clone https://github.com/octo-models/octo && cd octo
+pip install -e .
+# build the RLDS dataset (the repo is mounted at /mnt/c/Users/manas/Desktop/.../)
+cd /mnt/c/Users/manas/Desktop/ASSIGNMENTS,\ TESTS\ \&\ BOOKS/Robotics/openarm_mujoco-master/scripts/openarm_dataset
+tfds build
+# fine-tune
+cd ~/octo
+python scripts/finetune.py \
+    --config.pretrained_path=hf://rail-berkeley/octo-small-1.5 \
+    --config.dataset_kwargs.name=openarm_dataset \
+    --config.dataset_kwargs.data_dir=~/tensorflow_datasets \
+    --config.batch_size=16 \
+    --config.mode=head_only \
+    --config.action_horizon=16 \
+    --config.num_steps=50000
+```
+
+The free fallback if WSL2 is undesirable is **Google Colab (free T4, 16 GB VRAM)** —
+JAX-CUDA works there out of the box; the friction is uploading the RLDS dataset
+to Drive once and surviving the ~4 h idle-session reset by checkpointing.

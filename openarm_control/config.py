@@ -35,6 +35,7 @@ SCANNED_TABLE_SCENE = os.path.join(V2_MODEL_DIR, "scanned_table_scene.xml")
 ARTICULATED_SCENE = os.path.join(V2_MODEL_DIR, "articulated_scene.xml")
 CONTACT_SCENE = os.path.join(V2_MODEL_DIR, "contact_scene.xml")
 UNSCREW_SCENE = os.path.join(V2_MODEL_DIR, "unscrew_scene.xml")
+BALANCE_SCENE = os.path.join(V2_MODEL_DIR, "balance_scene.xml")
 
 # Registry of named scenes (used by the `openarm scenes` CLI command).
 SCENES = {
@@ -66,6 +67,7 @@ SCENES = {
     "articulated": ARTICULATED_SCENE,
     "contact": CONTACT_SCENE,
     "unscrew": UNSCREW_SCENE,
+    "balance": BALANCE_SCENE,
 }
 
 # Right arm identifiers

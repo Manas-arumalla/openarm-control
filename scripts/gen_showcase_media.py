@@ -26,7 +26,7 @@ os.makedirs(MEDIA, exist_ok=True)
 
 from openarm_control.config import (
     ARTICULATED_SCENE, CONTACT_SCENE, CLOTH_SCENE, UNSCREW_SCENE,
-    PEG_SOCKET_SCENE, RIGHT_ARM,
+    PEG_SOCKET_SCENE, BALANCE_SCENE, RIGHT_ARM,
 )
 
 W, H = 720, 540          # render / hero-PNG resolution (crisp)
@@ -55,6 +55,11 @@ CAMS = {
     "unscrew":    ([0.30, 0.00, 0.50], 0.95, 150, -16),
     "insert":     ([0.30, 0.00, 0.47], 0.95, 150, -18),
     "admittance": ([0.22, -0.16, 0.47], 0.90, 150, -16),
+    # Balance scenes: plate is 12 cm above the gripper (via a visible riser
+    # rod) at world z ~0.795. A moderate 3/4 view shows the arm below, riser
+    # extending up, plate + ball on top.
+    "balance_circle":  ([0.24, -0.22, 0.75], 0.85, 150, -18),
+    "balance_perturb": ([0.24, -0.22, 0.75], 0.85, 150, -18),
 }
 
 
@@ -177,6 +182,51 @@ def run_admittance():
     return cap.frames, hero
 
 
+def _run_balance(kind):
+    """Ball-balance scenarios rendered from the LQR controller.
+
+    `kind` selects the scenario:
+      * ``"circle"``  -- LQR tracks a circular target (radius 3 cm, period 5 s).
+        Ball visibly orbits the plate centre.
+      * ``"perturb"`` -- static target; every 1.6 s, a 25 cm/s random-direction
+        velocity kick is applied to the ball. LQR recovers before the next kick.
+    """
+    from openarm_control.balance import LQRBalancer
+    from openarm_control.demos.demo_balance import _target_at, _apply_perturbation
+    m, d = _keyframe_load(BALANCE_SCENE)
+    bal = LQRBalancer(m, d)
+    bal.setup_hold()
+    bal.reset(ball_offset_xy=(0.0, 0.0), settle_steps=400)
+    cam = free_cam(*CAMS[f"balance_{kind}"])
+    cap = FrameCapture(m, d, cam, stride=6)
+    np.random.seed(0)
+    if kind == "circle":
+        # 2 full circles for a satisfying loop.
+        radius, period = 0.03, 5.0
+        duration = 2 * period
+    elif kind == "perturb":
+        radius, period = 0.0, 5.0
+        duration = 8.0
+    else:
+        raise ValueError(f"unknown balance kind {kind!r}")
+    n = int(duration / m.opt.timestep)
+    next_perturb = 1.6
+    for k in range(n):
+        t = k * m.opt.timestep
+        if kind == "circle":
+            tx, ty = _target_at(t, "circle", radius, period)
+        else:
+            tx, ty = 0.0, 0.0
+            if t >= next_perturb:
+                _apply_perturbation(bal, 0.25)
+                next_perturb += 1.6
+        bal.step(target_xy=(tx, ty))
+        cap.sync()
+    hero = cap.grab()
+    cap.close()
+    return cap.frames, hero
+
+
 RUNNERS = {
     "drawer": lambda: run_articulated("drawer"),
     "door": lambda: run_articulated("door"),
@@ -185,6 +235,8 @@ RUNNERS = {
     "unscrew": run_unscrew,
     "insert": run_insert,
     "admittance": run_admittance,
+    "balance_circle":  lambda: _run_balance("circle"),
+    "balance_perturb": lambda: _run_balance("perturb"),
 }
 
 
@@ -219,6 +271,8 @@ def probe(names):
         "drawer": (ARTICULATED_SCENE, "ready"), "door": (ARTICULATED_SCENE, "ready"),
         "valve": (ARTICULATED_SCENE, "ready"), "unscrew": (UNSCREW_SCENE, "ready"),
         "insert": (PEG_SOCKET_SCENE, "ready"), "admittance": (CONTACT_SCENE, "ready"),
+        "balance_circle": (BALANCE_SCENE, "ready"),
+        "balance_perturb": (BALANCE_SCENE, "ready"),
     }
     for n in names:
         if n == "cloth":

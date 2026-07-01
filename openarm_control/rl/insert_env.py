@@ -2,10 +2,11 @@
 
 The peg is held in the gripper (welded); each episode the **socket is randomly
 repositioned** and the peg starts with a **random lateral offset**, with randomized
-**friction** -- a single robot facing many hole positions/offsets, the domain
-randomization that makes an insertion policy precise and robust (the user's design:
-one robot, many holes, rather than many robots). Round peg -> position insertion (no
-yaw alignment). Joint-delta position control with gravity compensation.
+**friction** -- a single robot facing many hole positions/offsets. This is the
+"one robot, many holes" flavour of domain randomization (rather than many robots)
+that lets an insertion policy generalise across socket positions and be robust to
+friction. Round peg -> position insertion (no yaw alignment). Joint-delta position
+control with gravity compensation.
 
 Observation (23):  qpos(7), qvel(7), peg_tip(3), socket(3), peg_tip->socket(3)
 Action (7):        joint-position deltas in [-1, 1], scaled by ACTION_SCALE

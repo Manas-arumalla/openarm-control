@@ -78,5 +78,13 @@ python benchmarks/plot_openarm_bench.py       # figures from the CSV
 - **Articulated:** drawer **~77 mm**, door **~40°**, valve **~75°** opened (classical).
 - **Admittance:** compliant **27 N** vs rigid **217 N** pressing the same depth (~8× softer).
 - **Cloth fold:** **~44%** span reduction (single-arm, self-colliding flex cloth).
+- **Ball balance:** PD / LQR / MPC / SAC / LQR+SAC on the same tilting-plate physics.
+  Static hold: PD **0.44**, LQR **0.39**, MPC **0.39**, LQR+SAC **5.9 mm**; SAC
+  from-scratch fails (ball off plate). Circle track (r=4 cm, T=2.5 s):
+  PD **40.3**, LQR **39.2**, **MPC 37.7**, LQR+SAC **43.2 mm**. See
+  [`../docs/IMPLEMENTATION_LOG.md`](../docs/IMPLEMENTATION_LOG.md)
+  for the training curves.
+
+![ball balance — five-way comparison](figures/openarm_bench_balance.png)
 
 All numbers are deterministic sim measurements written to `results/openarm_bench.csv`.

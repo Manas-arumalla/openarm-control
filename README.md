@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![MuJoCo](https://img.shields.io/badge/MuJoCo-3.x-3aa675)
-![Tests](https://img.shields.io/badge/tests-150%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-164%20passing-brightgreen)
 ![Code](https://img.shields.io/badge/openarm__control-~10.6k%20LOC-informational)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![Status](https://img.shields.io/badge/status-research--grade%20sim-blueviolet)
@@ -12,7 +12,7 @@ platform for the **Enactic OpenArm v2** (7-DOF × 2 + grippers) in
 [MuJoCo](https://mujoco.org/).
 
 Built on top of the official OpenArm v2 MJCF model, this project adds a clean,
-tested `openarm_control/` package (~10.6k LOC, **150 headless tests**) that takes the
+tested `openarm_control/` package (~10.6k LOC, **164 headless tests**) that takes the
 arm from raw physics to autonomous behavior: forward/inverse kinematics, Cartesian &
 **compliant (admittance)** control, grasping, pick-and-place, color sorting,
 RRT-Connect obstacle avoidance, **bimanual** coordination with collision-aware
@@ -45,6 +45,11 @@ A few of the manipulation skills, rendered headless from the scripted controller
     <td align="center"><b>Turn a valve</b><br><img src="media/valve.gif" width="260" alt="turn a valve"/></td>
     <td align="center"><b>Compliant press (admittance)</b><br><img src="media/admittance.gif" width="260" alt="compliant admittance press"/></td>
   </tr>
+  <tr>
+    <td align="center"><b>Ball balance — trajectory</b><br><img src="media/balance_circle.gif" width="260" alt="ball balancing on plate along a circle"/></td>
+    <td align="center"><b>Ball balance — disturbance rejection</b><br><img src="media/balance_perturb.gif" width="260" alt="LQR recovering from random ball kicks"/></td>
+    <td></td>
+  </tr>
 </table>
 
 …plus the dynamic flagship — **catching a ball thrown through the air** (Kalman +
@@ -76,7 +81,7 @@ MPC interception), shown in [its own section below](#spotlight-catching-a-ball-t
 | **Bimanual**: parallel sort, mirrored sync, collision-aware hand-off | `openarm_control/bimanual.py` | `openarm bimanual` |
 | **Visual servoing**: see, reach & grab a cube (camera-only) | `openarm_control/vision/` | `openarm servo` |
 | **Catching** a ball thrown through the air (Kalman ballistic prediction → reachability-aware interception → MPC min-jerk replanning → velocity-matched soft catch); optionally **vision-driven** (two RGB-D cameras), **bimanual** (best-arm selection, collision-free), and **two balls at once** (multi-object tracking, dual catch) | `openarm_control/catching.py`, `openarm_control/vision/ball_tracker.py` | `openarm catch [--vision] [--bimanual] [--twoball]` |
-| **Reinforcement learning** (reach + pick-and-place) | `openarm_control/rl/` | `openarm rl-train --task reach\|pick` |
+| **Reinforcement learning** (reach + pick-and-place + peg-insertion + ball-balance) | `openarm_control/rl/` | `openarm rl-train --task reach\|pick\|insert\|balance` |
 | **Imitation learning** (behavior cloning from scripted demos; **BC vs RL** head-to-head) | `openarm_control/imitation/` | `openarm bc-collect\|bc-train\|bc-eval` |
 | **Webcam human-arm imitation** (MediaPipe pose → retargeting → safe real-time teleop; single arm or both) | `openarm_control/teleop/` | `openarm mimic [--webcam] [--bimanual]` |
 | **Vision-grounded, language-commanded manipulation** (open-vocab detection → ground → collision-free pick/place; multi-step, queries, undo, clarification) | `openarm_control/agent/`, `openarm_control/vision/` | `openarm manipulate "put the green box in the bin"` |
@@ -90,6 +95,7 @@ MPC interception), shown in [its own section below](#spotlight-catching-a-ball-t
 | **Learned vision policy — ACT** (Action-Chunking Transformer: CNN image tokens + state → Transformer encoder-decoder → a chunk of future actions; GPU-trained, self-contained) | `openarm_control/imitation/act.py` | `openarm act train\|eval` |
 | **RL insertion suite** — domain-randomized peg-in-hole (randomized socket position / start offset / friction / peg radius) with a **classical vs BC vs RL** comparison | `openarm_control/rl/insert_env.py` | `openarm rl-train --task insert` |
 | **Deformable cloth folding** — a finer **9×9 self-colliding** MuJoCo flex cloth (settles flat, folds into friction-held layers); grasp a corner and fold the sheet | `openarm_control/cloth.py` | `openarm cloth` |
+| **Ball balancing on a plate** — real-time dynamic stabilisation: keep a ping-pong ball centred on a plate the gripper holds, track a circle/figure-8 trajectory, reject random velocity kicks. Three classical controllers — **PD, LQR, MPC** (LQR + trajectory feedforward) — plus two SAC variants (from scratch, and residual on top of LQR) on the same physics, with a five-way head-to-head comparison in OpenArm-Bench. | `openarm_control/balance.py`, `openarm_control/rl/balance_env.py`, `openarm_control/rl/balance_residual_env.py` | `openarm balance [--controller pd\|lqr\|mpc] [--trajectory circle\|figure8] [--perturb]` &nbsp;·&nbsp; `openarm rl-train --task balance\|balance_residual` |
 | **Bimanual coordination & hand-over** (nearest-arm pick; hand object across when only the other arm can reach), **driven by natural language** ("grab/move/transfer X to the left/right bin" → best arm + automatic hand-over, with held-state/queries/undo) + interactive object-selection playground (incl. real Google-Scanned meshes) | `openarm_control/bimanual.py`, `openarm_control/agent/bimanual_session.py`, `openarm_control/demos/demo_interactive.py` | `openarm bimanual --mode language\|coordinate` / `openarm interactive [--scanned]` |
 
 All capabilities are covered by **headless tests** (`python -m pytest tests/`).
@@ -134,9 +140,11 @@ plainly so results aren't over-read:
   but the fine-tuned model is **user-run** (GPU), so the out-of-the-box default stays the
   colour/shape detector.
 - **Learned policies are modest-scale.** A real **ACT** (action-chunking transformer,
-  vision + state, GPU-trained) and an **RL insertion env** with a classical-vs-BC-vs-RL
-  comparison now exist — but on relatively simple tasks (reach, peg-in-hole) at small
-  scale, not SOTA, and full SAC training is user-run.
+  vision + state, GPU-trained), an **RL insertion env** with a classical-vs-BC-vs-RL
+  comparison, and a **learned SAC ball-balancer** (from-scratch and residual-over-LQR
+  variants) head-to-head against PD/LQR/MPC on identical physics now exist — but on
+  relatively simple tasks (reach, peg-in-hole, ball-on-plate) at small scale, not SOTA,
+  and full SAC training is left as a reproducible step (not pre-run in CI).
 - **Bimanual works for well-separated tasks.** Two close-mounted 7-DOF arms collide when
   *both* reach over one centred object (their upper arms cross) — so the bottle-unscrew
   and cloth fold are **single-arm**, while well-separated bimanual (hand-over, parallel
@@ -280,6 +288,7 @@ python benchmarks/plot_openarm_bench.py      # -> benchmarks/figures/openarm_ben
 | | |
 |---|---|
 | ![classical vs learned policies](benchmarks/figures/openarm_bench_methods.png) | ![compliant vs rigid contact](benchmarks/figures/openarm_bench_admittance.png) |
+| ![ball balance: PD vs LQR vs MPC](benchmarks/figures/openarm_bench_balance.png) | |
 
 | Skill | Method | Metric | Result |
 |---|---|---|---|
@@ -290,13 +299,40 @@ python benchmarks/plot_openarm_bench.py      # -> benchmarks/figures/openarm_ben
 | Articulated — drawer | classical | opening | **77 mm** |
 | Articulated — door | classical | opening | **~40°** |
 | Articulated — valve | classical | turn | **~75°** |
-| Admittance | compliant vs rigid | contact force | **27 N** vs 217 N |
+| Admittance | compliant vs rigid | contact force | **27 N** vs 213 N |
+| Ball balance — static hold | PD / LQR / **MPC** / SAC / LQR+SAC | settle final err (mm) | 0.44 / 0.39 / **0.39** / ✗ / 5.9 |
+| Ball balance — circle track | PD / LQR / **MPC** / SAC / LQR+SAC | RMS error @ r=4cm T=2.5s (mm) | 40.3 / 39.2 / **37.7** / ✗ / 43.2 |
 | Cloth fold | classical | span reduction | **~44%** |
 
-(Numbers above are the actual output of `openarm_bench.py`, n=20 with fixed seeds.)
+(Numbers above are the actual output of `openarm_bench.py`, n=20 with fixed seeds.
+`✗` in the balance rows means "ball rolled off the plate" — see the note below.)
 The headline result is the **ablation** in the catcher (MPC replanning is the single
 critical component) and this side-by-side of **classical control, behaviour cloning,
 an ACT learned policy, and RL** on the same skills.
+
+**Note on the balance benchmark.** The ball-on-plate plant is smooth, linear near
+the equilibrium, and admits a closed-form optimal feedback law (the LQR itself),
+which makes it a useful stress test for model-free RL. Three RL configurations
+were run:
+
+1. **SAC from scratch** — 200 k timesteps. The reward shape has a heavy terminal
+   penalty for the ball leaving the plate, so the policy converges to a survival
+   strategy (episode length grows 36 → 59 steps) but never learns precision
+   (success rate stays at 0 % end-to-end). Under bench conditions the ball
+   leaves the plate within a few seconds.
+2. **Residual SAC on top of LQR, unregularized** — 50 k timesteps. Starts from
+   the 100 %-success LQR baseline; SAC's exploration pressure and uninformed
+   critic drift the policy away from zero residual, degrading it to 10 % success
+   over training. Standard residual-RL bootstrap failure.
+3. **Residual SAC with a squared action penalty** — 30 k timesteps. Zero residual
+   becomes the strong attractor; training holds 100 % success end-to-end and
+   converges monotonically. On the bench the composed controller adds ~5 mm of
+   steady-state error to the LQR baseline and slightly widens the circle-tracking
+   RMS — it does not beat LQR because there is no modelling gap for a learned
+   residual to close on this simulator's rigid-body physics.
+
+See [`docs/IMPLEMENTATION_LOG.md`](docs/IMPLEMENTATION_LOG.md) for the training
+curves and full analysis.
 
 ---
 
@@ -374,7 +410,7 @@ openarm bimanual --mode language "transfer the red block to the left bin"   # be
 openarm bimanual --mode language --interactive   # type bimanual commands live
 
 openarm showcase                   # grand tour: sort→plan→bimanual→servo→catch→stack→insert→mimic
-openarm test                       # headless test suite (150 tests)
+openarm test                       # headless test suite (164 tests)
 ```
 
 Every command documents its flags in `openarm list`; run `openarm <command> --help`
@@ -424,7 +460,7 @@ openarm_mujoco-master/
 ├── scripts/                     # fetch_models.py, gen_showcase_media.py (GIF/PNG renders)
 ├── demos/                       # trained policies (reach_act.pt, *_bc.pt) — datasets regenerate
 ├── media/                       # showcase GIFs + screenshots (rendered headless)
-├── tests/                       # headless pytest suite (150 tests)
+├── tests/                       # headless pytest suite (164 tests)
 ├── docs/IMPLEMENTATION_LOG.md   # detailed build/change history (verified numbers)
 ├── docs/ROADMAP_EXTENSIONS.md   # the post-v1 extension arc (F1..E1)
 ├── docs/MODELS.md               # what's versioned vs auto-downloaded vs regenerable
