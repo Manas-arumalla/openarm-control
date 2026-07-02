@@ -69,6 +69,32 @@ python benchmarks/openarm_bench.py --only insertion,reach
 python benchmarks/plot_openarm_bench.py       # figures from the CSV
 ```
 
+### Protocol, per cell
+
+Every cell in the leaderboard is reproducible with one command. Stochastic tasks
+run `n=20` episodes on fixed seeds; deterministic tasks are seed-invariant single
+measurements (running them twice produces identical numbers, so no seed spread is
+reported — reporting a confidence interval over identical runs would be noise
+theater).
+
+| Cell | Episodes / seeds | Success criterion / metric | Reproduce |
+|---|---|---|---|
+| Insertion — classical | n=20, seeds 0–19 | peg tip within tolerance at socket depth | `python benchmarks/openarm_bench.py --only insertion` |
+| Insertion — BC | n=20, seeds 1000–1019 | same | same command (loads `demos/insert_bc.pt`) |
+| Reach — BC | n=20, seeds 700–719 | end-effector within 3 cm of target | `python benchmarks/openarm_bench.py --only reach` |
+| Reach — ACT | n=20, seeds 700–719 | same | same command (loads `demos/reach_act.pt`) |
+| Drawer / door / valve | deterministic | opened distance / swing angle / turn angle | `python benchmarks/openarm_bench.py --only articulated` |
+| Admittance vs rigid | deterministic | steady contact force at the same 3 cm press | `python benchmarks/openarm_bench.py --only admittance` |
+| Cloth fold | deterministic | y-span reduction after fold | `python benchmarks/openarm_bench.py --only cloth_fold` |
+| Balance — PD / LQR / MPC | deterministic | static settle error; circle-tracking RMS (r=4 cm, T=2.5 s) | `python benchmarks/openarm_bench.py --only balance` |
+| Balance — SAC, LQR+SAC | deterministic eval of a trained policy | same; ball-off-plate reported as failure | train first: `openarm rl-train --task balance --timesteps 200000` and `openarm rl-train --task balance_residual --timesteps 30000`, then the balance command above |
+
+The learned-policy cells (BC, ACT) evaluate the small trained policies that are
+versioned in `demos/` — they run from a fresh clone with no training step. The
+SAC balance cells require local training first (the SAC weights follow the same
+not-versioned convention as `reach_sac.zip`); the bench auto-detects the trained
+models and appends their rows when present.
+
 | | |
 |---|---|
 | ![classical vs learned](figures/openarm_bench_methods.png) | ![compliant vs rigid](figures/openarm_bench_admittance.png) |

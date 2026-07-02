@@ -1,5 +1,6 @@
 # OpenArm Control & Simulation Platform
 
+[![CI](https://github.com/Manas-arumalla/openarm-control/actions/workflows/ci.yml/badge.svg)](https://github.com/Manas-arumalla/openarm-control/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![MuJoCo](https://img.shields.io/badge/MuJoCo-3.x-3aa675)
 ![Code](https://img.shields.io/badge/openarm__control-~10.6k%20LOC-informational)
@@ -60,12 +61,56 @@ MPC interception), shown in [its own section below](#spotlight-catching-a-ball-t
 
 ## Contents
 
-- [Skills in motion](#skills-in-motion)
+- [Skills in motion](#skills-in-motion) · [OpenArm-Bench](#openarm-bench--one-protocol-classical-vs-learned)
 - [Highlights](#highlights) · [Verified numbers](#verified-numbers) · [Limitations & scope](#limitations--scope)
 - [Spotlight: catching a ball](#spotlight-catching-a-ball-thrown-through-the-air) · [Capstone: webcam imitation](#capstone-mimic-a-human-arm--and-hand--from-a-webcam)
-- [Benchmarks](#benchmarks) · [OpenArm-Bench](#openarm-bench--unified-manipulation-eval)
+- [Catching benchmark](#benchmarks)
 - [Install](#install) · [Quickstart](#quickstart) · [Project structure](#project-structure)
 - [Documentation](#documentation) · [Credits & license](#credits--license)
+
+---
+
+## OpenArm-Bench — one protocol, classical vs learned
+
+Every manipulation skill is scored by a single benchmark runner with fixed seeds
+and per-cell reproduce commands ([full protocol](benchmarks/README.md)). Methods
+compared on the same physics: **classical (scripted/model-based) · behaviour
+cloning · ACT (vision) · SAC · LQR+SAC residual**.
+
+| Task (protocol) | Classical | BC (state) | ACT (vision+state) | RL |
+|---|---|---|---|---|
+| **Peg insertion** — success, n=20, randomized socket/offset/friction | **100 %** | 70 % | — | — |
+| **Reach** — success, n=20, random targets | — | **95 %** | 80 % | — |
+| **Drawer** — opened (deterministic) | **77 mm** | — | — | — |
+| **Door** — swung (deterministic) | **40°** | — | — | — |
+| **Valve** — turned (deterministic) | **75°** | — | — | — |
+| **Compliant press** — steady contact force (deterministic) | **27 N** (rigid: 213 N) | — | — | — |
+| **Cloth fold** — span reduction (deterministic) | **44 %** | — | — | — |
+| **Ball balance, static** — settle error (deterministic) | PD 0.44 / LQR 0.39 / **MPC 0.39 mm** | — | — | SAC ✗ off plate · LQR+SAC 5.9 mm |
+| **Ball balance, circle** — tracking RMS (deterministic) | PD 40.3 / LQR 39.2 / **MPC 37.7 mm** | — | — | SAC ✗ off plate · LQR+SAC 43.2 mm |
+
+Every number is the output of one command pair (n=20 episodes on the stochastic
+tasks; deterministic tasks are seed-invariant single measurements, marked as such):
+
+```bash
+python benchmarks/openarm_bench.py           # -> benchmarks/results/openarm_bench.csv
+python benchmarks/plot_openarm_bench.py      # -> benchmarks/figures/openarm_bench_*.png
+```
+
+| | |
+|---|---|
+| ![classical vs learned policies](benchmarks/figures/openarm_bench_methods.png) | ![compliant vs rigid contact](benchmarks/figures/openarm_bench_admittance.png) |
+| ![ball balance: classical vs learned](benchmarks/figures/openarm_bench_balance.png) | |
+
+**Reading the balance row.** The ball-on-plate plant is smooth and linear near
+equilibrium — the LQR *is* the closed-form optimal feedback — which makes it a
+deliberate stress test for model-free RL: SAC from scratch (200 k steps) converges
+to a survival strategy and never learns precision; an unregularized SAC residual
+on top of LQR *degrades* the 100 %-success baseline to 10 % (the classic
+residual-RL bootstrap failure); a squared-action-penalty residual trains cleanly
+at 100 % success but cannot beat LQR — there is no modelling gap for a learned
+correction to close on clean rigid-body physics. Training curves and analysis in
+[`docs/IMPLEMENTATION_LOG.md`](docs/IMPLEMENTATION_LOG.md).
 
 ---
 
@@ -273,67 +318,10 @@ python benchmarks/catching_benchmark.py          # CSV tables + figures
 | ![ablations](benchmarks/figures/ablations.png) | ![estimation error](benchmarks/figures/estimation_error.png) |
 
 Catch rate vs throw difficulty (reaction time) · vs camera noise · component
-ablations (velocity-matching, weld-at-closest, MPC replanning) · and the
-ballistic estimator's prediction error vs lookahead.
-
-### OpenArm-Bench — unified manipulation eval
-
-One benchmark consolidating the manipulation skills with a standardized protocol and
-the **classical vs BC vs ACT vs RL** method comparison:
-
-```bash
-python benchmarks/openarm_bench.py          # table + benchmarks/results/openarm_bench.csv
-python benchmarks/plot_openarm_bench.py      # -> benchmarks/figures/openarm_bench_*.png
-```
-
-| | |
-|---|---|
-| ![classical vs learned policies](benchmarks/figures/openarm_bench_methods.png) | ![compliant vs rigid contact](benchmarks/figures/openarm_bench_admittance.png) |
-| ![ball balance: PD vs LQR vs MPC](benchmarks/figures/openarm_bench_balance.png) | |
-
-| Skill | Method | Metric | Result |
-|---|---|---|---|
-| Insertion (peg-in-hole) | classical (scripted) | success | **100%** |
-| Insertion | behaviour cloning (state) | success | ~70% |
-| Reach | behaviour cloning (state) | success | ~95% |
-| Reach | **ACT** (vision + state, chunked) | success | ~80% |
-| Articulated — drawer | classical | opening | **77 mm** |
-| Articulated — door | classical | opening | **~40°** |
-| Articulated — valve | classical | turn | **~75°** |
-| Admittance | compliant vs rigid | contact force | **27 N** vs 213 N |
-| Ball balance — static hold | PD / LQR / **MPC** / SAC / LQR+SAC | settle final err (mm) | 0.44 / 0.39 / **0.39** / ✗ / 5.9 |
-| Ball balance — circle track | PD / LQR / **MPC** / SAC / LQR+SAC | RMS error @ r=4cm T=2.5s (mm) | 40.3 / 39.2 / **37.7** / ✗ / 43.2 |
-| Cloth fold | classical | span reduction | **~44%** |
-
-(Numbers above are the actual output of `openarm_bench.py`, n=20 with fixed seeds.
-`✗` in the balance rows means "ball rolled off the plate" — see the note below.)
-The headline result is the **ablation** in the catcher (MPC replanning is the single
-critical component) and this side-by-side of **classical control, behaviour cloning,
-an ACT learned policy, and RL** on the same skills.
-
-**Note on the balance benchmark.** The ball-on-plate plant is smooth, linear near
-the equilibrium, and admits a closed-form optimal feedback law (the LQR itself),
-which makes it a useful stress test for model-free RL. Three RL configurations
-were run:
-
-1. **SAC from scratch** — 200 k timesteps. The reward shape has a heavy terminal
-   penalty for the ball leaving the plate, so the policy converges to a survival
-   strategy (episode length grows 36 → 59 steps) but never learns precision
-   (success rate stays at 0 % end-to-end). Under bench conditions the ball
-   leaves the plate within a few seconds.
-2. **Residual SAC on top of LQR, unregularized** — 50 k timesteps. Starts from
-   the 100 %-success LQR baseline; SAC's exploration pressure and uninformed
-   critic drift the policy away from zero residual, degrading it to 10 % success
-   over training. Standard residual-RL bootstrap failure.
-3. **Residual SAC with a squared action penalty** — 30 k timesteps. Zero residual
-   becomes the strong attractor; training holds 100 % success end-to-end and
-   converges monotonically. On the bench the composed controller adds ~5 mm of
-   steady-state error to the LQR baseline and slightly widens the circle-tracking
-   RMS — it does not beat LQR because there is no modelling gap for a learned
-   residual to close on this simulator's rigid-body physics.
-
-See [`docs/IMPLEMENTATION_LOG.md`](docs/IMPLEMENTATION_LOG.md) for the training
-curves and full analysis.
+ablations · and the ballistic estimator's prediction error vs lookahead. The
+headline result is the **ablation**: removing MPC replanning collapses the catch
+rate from 100 % to 10 %, while removing velocity matching or welding at jaw entry
+costs nothing — replanning is the single critical component.
 
 ---
 
