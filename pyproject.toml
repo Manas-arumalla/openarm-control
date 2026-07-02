@@ -20,7 +20,7 @@ dependencies = [
 
 [project.optional-dependencies]
 rl = ["gymnasium>=1.0", "stable-baselines3>=2.0", "torch"]
-vision = ["opencv-python", "mediapipe"]   # used from Phase C onward
+vision = ["opencv-python", "mediapipe", "imageio"]   # used from Phase C onward
 dev = ["pytest", "ruff"]
 all = ["openarm-control[rl,vision,dev]"]
 

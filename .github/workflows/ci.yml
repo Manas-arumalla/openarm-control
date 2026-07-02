@@ -81,9 +81,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libosmesa6 libosmesa6-dev libgl1
       - name: Install package (CPU-only torch)
+        # mujoco is pinned to the version the suite is validated against —
+        # deformable (flex) behavior and contact numerics drift between minor
+        # releases, which flips the borderline cloth/planning tests. imageio is
+        # the one piece of the vision extra the tests need (synthgen), pulled
+        # in without the heavy mediapipe/opencv stack.
         run: |
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -e ".[rl,dev]"
+          pip install -e ".[rl,dev]" "mujoco==3.8.1" imageio
       - name: Run tests
         run: pytest ${{ matrix.suite.paths }}
