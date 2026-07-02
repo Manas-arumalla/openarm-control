@@ -9,7 +9,6 @@ these fixtures (open drawer/door, turn valve) are built on top in phase S3.
 import os
 import sys
 
-import numpy as np
 import mujoco
 import pytest
 

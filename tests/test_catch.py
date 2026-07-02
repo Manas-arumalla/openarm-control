@@ -19,7 +19,7 @@ from openarm_control.grasp import topdown_orientation
 from openarm_control.kinematics import orientation_error
 from openarm_control.config import CATCH_BIMANUAL_SCENE, CATCH_TWOBALL_SCENE
 from openarm_control.catching import (
-    BallisticKalmanFilter, InterceptionSolver, CatchController,
+    BallisticKalmanFilter, CatchController,
     BimanualCatchController, TwoBallCatchController, MultiBallTracker,
     look_at_orientation, quintic, sample_throw, sample_throw_bimanual,
 )

@@ -101,7 +101,6 @@ def _run_headless_one(cls, offset, duration, trajectory, radius, period,
     bal = cls(m, d)
     bal.setup_hold()
     bal.reset(ball_offset_xy=offset, settle_steps=400)
-    rng = np.random.default_rng(seed)
     np.random.seed(seed)                               # for _apply_perturbation
     n = int(duration / m.opt.timestep)
     errs = np.empty(n)

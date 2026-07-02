@@ -121,7 +121,6 @@ class ToolController:
     def _tool_tip(self, tool_body, toward_xy):
         """World position of the tool end nearest ``toward_xy`` (the pushing tip)."""
         bid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, tool_body)
-        half = self._obj_half(tool_body)        # max(x,y) half-extent; sticks are long in x
         # the long axis is the geom's largest half-dim; use the geom's local +/-x.
         g = next(gg for gg in range(self.model.ngeom) if self.model.geom_bodyid[gg] == bid)
         L = float(self.model.geom_size[g][0])

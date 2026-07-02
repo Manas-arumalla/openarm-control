@@ -15,7 +15,7 @@ import numpy as np
 import mujoco
 
 from ..config import RIGHT_ARM
-from ..pick_and_place import PickPlaceController, TABLE_TOP_Z, GRASP_DEPTH
+from ..pick_and_place import PickPlaceController, TABLE_TOP_Z
 from ..planners import CollisionChecker, RRTPlanner
 
 OPEN, CLOSE = False, True

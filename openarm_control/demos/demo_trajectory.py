@@ -15,7 +15,7 @@ import mujoco.viewer
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from openarm_control.config import SINGLE_ARM_SCENE, RIGHT_ARM_ACTUATORS
+from openarm_control.config import SINGLE_ARM_SCENE
 from openarm_control.kinematics import OpenArmKinematics
 from openarm_control.controller import CartesianController
 from openarm_control.trajectory import quintic_polynomial

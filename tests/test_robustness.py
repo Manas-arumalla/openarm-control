@@ -12,7 +12,6 @@ Both are deterministic (no physics rollouts), so they can't flake.
 import os
 import sys
 
-import numpy as np
 import mujoco
 import pytest
 
@@ -39,9 +38,6 @@ def test_grasp_weld_centers_object_laterally():
     ppc = PickPlaceController(model, data, arm=RIGHT_ARM)
 
     # Shove cube_red well off to the side, then weld it.
-    jadr = model.jnt_qposadr[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT,
-                                               "cube_red_freejoint")] \
-        if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "cube_red_freejoint") >= 0 else None
     bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "cube_red")
     qadr = model.jnt_qposadr[model.body_jntadr[bid]]      # free joint of cube_red
     data.qpos[qadr:qadr + 3] = [0.30, -0.05, 0.45]        # offset from the gripper

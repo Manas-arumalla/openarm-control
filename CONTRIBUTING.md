@@ -33,8 +33,10 @@ openarm test                       # same, via the CLI (passes args through)
 
 ## Code style
 
-- **Formatter / linter:** [ruff](https://docs.astral.sh/ruff/) (`line-length = 100`,
-  target `py310`). Run `ruff check .` and `ruff format .` before opening a PR.
+- **Linter:** [ruff](https://docs.astral.sh/ruff/), configured in `pyproject.toml`
+  (correctness-first rule set; a few style rules are deliberately excluded to match
+  the codebase's compact idiom). `ruff check .` must pass — it is enforced in CI
+  alongside the test suite (see `.github/workflows/ci.yml`).
 - **Naming:** the package is `openarm_control` (never `control` — it collides with
   the `python-control` package). Match the surrounding code's style and comment density.
 - **Imports:** keep heavy/optional deps (torch, ultralytics, mediapipe) **lazy**

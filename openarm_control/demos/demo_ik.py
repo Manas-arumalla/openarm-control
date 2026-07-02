@@ -17,7 +17,7 @@ def main():
     model = mujoco.MjModel.from_xml_path(SINGLE_ARM_SCENE)
     data = mujoco.MjData(model)
     kinematics = OpenArmKinematics(model, data)
-    
+
     # Load home keyframe
     key_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_KEY, "home")
     if key_id != -1:
@@ -40,7 +40,7 @@ def main():
     # Verify solution
     # We pass q_sol to forward_kinematics to see where it actually puts the EE
     achieved_pos, _ = kinematics.forward_kinematics(q_sol)
-    
+
     print("\nResults:")
     print(f"Joint Angle Solution: {np.round(q_sol, 3)}")
     print(f"Achieved Position:    {achieved_pos}")

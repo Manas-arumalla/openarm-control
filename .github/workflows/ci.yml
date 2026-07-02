@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Headless MuJoCo rendering on runners without a display.
+  MUJOCO_GL: osmesa
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check .
+
+  # The suite is split into three parallel groups so wall-clock stays low
+  # while every test still runs on every push:
+  #   core     — kinematics, control, planning, bimanual, perception, skills
+  #              (also the default bucket: new test files land here automatically)
+  #   dynamics — long-horizon sim tests (catching, throwing, cloth, balance, bench)
+  #   learned  — tests that train/eval small policies in-test (torch)
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+        suite:
+          - name: core
+            paths: >-
+              tests/
+              --ignore=tests/test_balance.py
+              --ignore=tests/test_rl_balance_env.py
+              --ignore=tests/test_catch.py
+              --ignore=tests/test_throwing.py
+              --ignore=tests/test_cloth.py
+              --ignore=tests/test_openarm_bench.py
+              --ignore=tests/test_act.py
+              --ignore=tests/test_harness.py
+              --ignore=tests/test_imitation.py
+              --ignore=tests/test_rl.py
+              --ignore=tests/test_insert_rl.py
+          - name: dynamics
+            paths: >-
+              tests/test_balance.py
+              tests/test_rl_balance_env.py
+              tests/test_catch.py
+              tests/test_throwing.py
+              tests/test_cloth.py
+              tests/test_openarm_bench.py
+          - name: learned
+            paths: >-
+              tests/test_act.py
+              tests/test_harness.py
+              tests/test_imitation.py
+              tests/test_rl.py
+              tests/test_insert_rl.py
+    name: tests-${{ matrix.suite.name }} (py${{ matrix.python-version }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: System libraries for headless rendering
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libosmesa6 libosmesa6-dev libgl1
+      - name: Install package (CPU-only torch)
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[rl,dev]"
+      - name: Run tests
+        run: pytest ${{ matrix.suite.paths }}

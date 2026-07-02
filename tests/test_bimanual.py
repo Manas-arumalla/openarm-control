@@ -9,9 +9,9 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from openarm_control.config import (BIMANUAL_SCENE, BIMANUAL_STACK_SCENE,
-                                     BIMANUAL_HANDOVER_SCENE, RIGHT_ARM, LEFT_ARM)
+                                     BIMANUAL_HANDOVER_SCENE)
 from openarm_control.bimanual import (BimanualController, ParallelSort, RelayHandoff,
-                              BimanualStack, BimanualCoordinator, synchronized_move, mirror_config)
+                              BimanualStack, BimanualCoordinator, synchronized_move)
 from openarm_control.grasp import topdown_orientation
 
 

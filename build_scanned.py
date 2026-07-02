@@ -3,7 +3,8 @@ center them, and emit per-object params. Run a YOLO-World detection check.
 
 Visual = the scanned mesh (looks real); collision = a simple box (reliable grasp).
 """
-import os, shutil, sys
+import os
+import shutil
 import numpy as np
 
 ROOT = os.path.dirname(os.path.abspath(__file__))

@@ -51,7 +51,7 @@ def plot_methods(rows):
         skill = "insertion" if "Insertion" in gname else "reach"
         for method, lbl in methods:
             v = succ.get((skill, method), 0.0) * 100
-            b = ax.bar(x, v, width=0.8, color=color[method], edgecolor="white")
+            ax.bar(x, v, width=0.8, color=color[method], edgecolor="white")
             ax.text(x, v + 1.5, f"{v:.0f}%", ha="center", fontsize=10, fontweight="bold")
             ax.text(x, -7, lbl, ha="center", fontsize=8.5, color="#333")
             xs.append(x); x += 1

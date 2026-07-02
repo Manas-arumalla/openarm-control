@@ -48,8 +48,7 @@ class OpenArmPickPlaceEnv(gym.Env):
         self.act_ids = np.array(self.ppc.arm_acts)
         self.grip_act = self.ppc.grip_act
         self.block_bid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "block")
-        bj = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, "block")  # freejoint? resolve via body
-        # block free-joint qpos address
+        # block free-joint qpos address (resolved via the body's joints)
         for j in range(self.model.njnt):
             if self.model.jnt_bodyid[j] == self.block_bid and self.model.jnt_type[j] == mujoco.mjtJoint.mjJNT_FREE:
                 self.block_qadr = int(self.model.jnt_qposadr[j])

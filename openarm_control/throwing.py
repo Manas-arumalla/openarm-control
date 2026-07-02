@@ -22,8 +22,7 @@ import mujoco
 
 from .config import RIGHT_ARM
 from .grasp import GraspSolver, topdown_orientation
-from .kinematics import OpenArmKinematics
-from .catching import quintic, _unit, look_at_orientation
+from .catching import quintic
 
 QD_MAX = np.array([4.5, 4.5, 5.0, 5.0, 8.0, 8.0, 10.0])    # per-joint speed budget (rad/s)
 TABLE_TOP_Z = 0.40

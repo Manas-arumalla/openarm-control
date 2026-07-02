@@ -8,7 +8,6 @@ isn't tested here.
 import os
 import sys
 
-import numpy as np
 import mujoco
 import pytest
 

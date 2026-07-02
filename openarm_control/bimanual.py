@@ -19,7 +19,6 @@ import numpy as np
 
 from .config import RIGHT_ARM, LEFT_ARM, MIRROR_R2L
 from .grasp import topdown_orientation
-from .grasp6 import Grasp6DOFSolver
 from .pick_and_place import PickPlaceController, TABLE_TOP_Z, GRASP_DEPTH
 from .planners.collision import CollisionChecker
 from .trajectory import quintic_polynomial

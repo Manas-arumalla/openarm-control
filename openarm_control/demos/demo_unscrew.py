@@ -44,7 +44,7 @@ def run_headless():
         mujoco.mj_step(m, d)
 
     print(f"Single-arm bottle opening (ok={ok}):")
-    print(f"  bottle           : clamped in a stand (collision-free, working arm has full room)")
+    print("  bottle           : clamped in a stand (collision-free, working arm has full room)")
     print(f"  cap unscrewed    : turned {turned:.0f} deg over several re-gripping bursts")
     print(f"  cap lifted off   : rose {(d.xpos[cap][2]-capz0)*1000:+.0f} mm clear of the bottle")
 

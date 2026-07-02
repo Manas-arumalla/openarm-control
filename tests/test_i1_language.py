@@ -8,7 +8,6 @@ ArticulatedSession dispatches a parsed command to the controller end-to-end.
 import os
 import sys
 
-import numpy as np
 import mujoco
 import pytest
 

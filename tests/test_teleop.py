@@ -15,9 +15,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from openarm_control.config import TELEOP_SCENE, ARMS
 from openarm_control.teleop import (ArmLandmarks, ScriptedPoseSource,
-                                    ArmRetargeter, TeleopController)
+                                    TeleopController)
 from openarm_control.teleop.retarget import _rot_between
-from openarm_control.kinematics import orientation_error
 
 
 def _scene():

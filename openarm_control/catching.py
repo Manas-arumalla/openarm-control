@@ -28,7 +28,7 @@ import numpy as np
 import mujoco
 
 from .config import RIGHT_ARM, LEFT_ARM, GRASP_LOCAL_OFFSET, IK_TOLERANCE, IK_DAMPING
-from .kinematics import OpenArmKinematics, orientation_error
+from .kinematics import OpenArmKinematics
 from .pick_and_place import PickPlaceController
 from .planners.collision import CollisionChecker
 

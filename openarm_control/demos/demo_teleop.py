@@ -23,10 +23,9 @@ import mujoco
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from openarm_control.config import (TELEOP_SCENE, TELEOP_PICK_SCENE,
-                                     RIGHT_ARM, LEFT_ARM, ARMS)
+                                     ARMS)
 from openarm_control.teleop import (TeleopController, ScriptedPoseSource,
-                                    WebcamPoseSource, ArmRetargeter)
-from openarm_control.kinematics import OpenArmKinematics
+                                    WebcamPoseSource)
 
 PICK_BLOCKS = ["block_red", "block_green", "block_blue"]
 

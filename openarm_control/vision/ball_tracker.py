@@ -10,7 +10,6 @@ color-blob detector used now can be swapped for a learned detector later.
 """
 
 import numpy as np
-import mujoco
 
 from .camera import Camera
 from .detection import detect_color, detect_color_blobs

@@ -42,9 +42,16 @@ line-length = 100
 target-version = "py310"
 
 [tool.ruff.lint]
-# pragmatic defaults; expand as the codebase matures
-select = ["E", "F", "W", "I"]
-ignore = ["E501"]   # line length handled by formatter / line-length above
+# Correctness-first gate (enforced in CI). Style rules that conflict with the
+# codebase's established compact idiom (one-line `a; b` statements, section-
+# grouped imports) are excluded deliberately rather than half-enforced:
+#   E501        line length is set above but not enforced retroactively
+#   E701/E702   compact one-line statements are used intentionally throughout
+#   E402        demos/tests insert the repo root on sys.path before imports
+#   E741        physics code uses `l` for lengths in tight math contexts
+#   I           import sorting would churn every file for zero behavior change
+select = ["E", "F", "W"]
+ignore = ["E501", "E701", "E702", "E402", "E741"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

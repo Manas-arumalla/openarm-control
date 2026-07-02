@@ -11,7 +11,6 @@ import argparse
 import os
 import sys
 
-import numpy as np
 import mujoco
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))

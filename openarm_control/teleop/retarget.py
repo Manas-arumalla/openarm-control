@@ -117,7 +117,6 @@ class ArmRetargeter:
         kin = self.kin
         p_wrist, R = kin.forward_kinematics()
         p_elbow = kin.data.xpos[self._elbow_bid].copy()
-        u_r = _unit(p_elbow - self.p_shoulder)        # robot home upper-arm dir
         f_r = _unit(p_wrist - p_elbow)                # robot home forearm dir
         self.ee_home, self.R_home, self.f_home = p_wrist.copy(), R.copy(), f_r
 

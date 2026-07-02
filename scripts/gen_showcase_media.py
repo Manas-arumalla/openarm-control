@@ -26,7 +26,7 @@ os.makedirs(MEDIA, exist_ok=True)
 
 from openarm_control.config import (
     ARTICULATED_SCENE, CONTACT_SCENE, CLOTH_SCENE, UNSCREW_SCENE,
-    PEG_SOCKET_SCENE, BALANCE_SCENE, RIGHT_ARM,
+    PEG_SOCKET_SCENE, BALANCE_SCENE,
 )
 
 W, H = 720, 540          # render / hero-PNG resolution (crisp)
@@ -188,7 +188,7 @@ def _run_balance(kind):
     `kind` selects the scenario:
       * ``"circle"``  -- LQR tracks a circular target (radius 3 cm, period 5 s).
         Ball visibly orbits the plate centre.
-      * ``"perturb"`` -- static target; every 1.6 s, a 25 cm/s random-direction
+      * ``"perturb"`` -- static target; every 2.5 s, a 20 cm/s random-direction
         velocity kick is applied to the ball. LQR recovers before the next kick.
     """
     from openarm_control.balance import LQRBalancer

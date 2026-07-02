@@ -63,7 +63,6 @@ def test_carried_object_collision_is_checked():
     model, data, ex = _setup()
     ok, _ = ex.grasp("blue can")
     assert ok
-    q_held = ex._q_now()                          # holding, lifted clear
     # A config with the gripper just above the green box: the gripper clears it,
     # but the carried can (hanging below) would dip into it.
     gb = _pos(model, data, "box_green")

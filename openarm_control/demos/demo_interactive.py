@@ -24,7 +24,7 @@ import mujoco
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from openarm_control.config import BIMANUAL_TABLE_SCENE, SCANNED_TABLE_SCENE, V2_MODEL_DIR
+from openarm_control.config import BIMANUAL_TABLE_SCENE, SCANNED_TABLE_SCENE
 from openarm_control.bimanual import BimanualCoordinator
 from openarm_control.pick_and_place import TABLE_TOP_Z
 
