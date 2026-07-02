@@ -24,6 +24,8 @@ insertion suite** (classical vs BC vs RL), and a unified **OpenArm-Bench**.
 > culminating in **real-time webcam human-arm imitation**. See
 > **[ROADMAP.md](ROADMAP.md)** for the full plan.
 
+> **Related:** [manipdyn](https://github.com/Manas-arumalla/manipdyn) — the single-arm UR5e methods lab where this benchmark approach originated.
+
 <p align="center"><img height="420" alt="OpenArm v2" src="media/v2.png" /></p>
 
 ---
