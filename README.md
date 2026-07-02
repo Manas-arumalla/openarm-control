@@ -2,7 +2,6 @@
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![MuJoCo](https://img.shields.io/badge/MuJoCo-3.x-3aa675)
-![Tests](https://img.shields.io/badge/tests-164%20passing-brightgreen)
 ![Code](https://img.shields.io/badge/openarm__control-~10.6k%20LOC-informational)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![Status](https://img.shields.io/badge/status-research--grade%20sim-blueviolet)
