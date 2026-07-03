@@ -82,3 +82,18 @@ def test_articulated_joints_move_within_range():
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
+
+def test_ready_keyframe_clear_of_arms():
+    """The ready keyframe must not start with the arms penetrating any fixture
+    (a raised fixture once intersected the parked gripper's resting zone --
+    every skill then began in contact)."""
+    model, data = _load()
+    fixtures = {"cabinet_drawer", "drawer", "cabinet_door", "door", "valve", "valve_base"}
+    bad = []
+    for i in range(data.ncon):
+        c = data.contact[i]
+        b1 = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, model.geom_bodyid[c.geom1]) or ""
+        b2 = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, model.geom_bodyid[c.geom2]) or ""
+        if c.dist < -0.0005 and ("openarm" in b1 or "openarm" in b2) and (b1 in fixtures or b2 in fixtures):
+            bad.append((b1, b2, round(float(c.dist) * 1000, 2)))
+    assert not bad, f"arms start in contact with fixtures: {bad}"

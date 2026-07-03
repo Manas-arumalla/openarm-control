@@ -12,7 +12,7 @@ platform for the **Enactic OpenArm v2** (7-DOF × 2 + grippers) in
 [MuJoCo](https://mujoco.org/).
 
 Built on top of the official OpenArm v2 MJCF model, this project adds a clean,
-tested `openarm_control/` package (~10.6k LOC, **164 headless tests**) that takes the
+tested `openarm_control/` package (~10.6k LOC, **165 headless tests**) that takes the
 arm from raw physics to autonomous behavior: forward/inverse kinematics, Cartesian &
 **compliant (admittance)** control, grasping, pick-and-place, color sorting,
 RRT-Connect obstacle avoidance, **bimanual** coordination with collision-aware
@@ -81,13 +81,13 @@ cloning · ACT (vision) · SAC · LQR+SAC residual**.
 |---|---|---|---|---|
 | **Peg insertion** — success, n=20, randomized socket/offset/friction | **100 %** | 70 % | — | — |
 | **Reach** — success, n=20, random targets | — | **95 %** | 80 % | — |
-| **Drawer** — opened (deterministic) | **77 mm** | — | — | — |
-| **Door** — swung (deterministic) | **40°** | — | — | — |
-| **Valve** — turned (deterministic) | **75°** | — | — | — |
+| **Drawer** — opened, frontal grasp (deterministic) | **95 mm** | — | — | — |
+| **Door** — swung (deterministic) | **54°** | — | — | — |
+| **Valve** — turned (deterministic) | **78°** | — | — | — |
 | **Compliant press** — steady contact force (deterministic) | **27 N** (rigid: 213 N) | — | — | — |
 | **Cloth fold** — span reduction (deterministic) | **44 %** | — | — | — |
-| **Ball balance, static** — settle error (deterministic) | PD 0.44 / LQR 0.39 / **MPC 0.39 mm** | — | — | SAC ✗ off plate · LQR+SAC 5.9 mm |
-| **Ball balance, circle** — tracking RMS (deterministic) | PD 40.3 / LQR 39.2 / **MPC 37.7 mm** | — | — | SAC ✗ off plate · LQR+SAC 43.2 mm |
+| **Ball balance, static** — settle error (deterministic) | PD 0.44 / LQR 0.39 / **MPC 0.39 mm** | — | — | SAC ✗ off plate · LQR+SAC 5.2 mm |
+| **Ball balance, circle** — tracking RMS (deterministic) | PD 40.3 / LQR 39.2 / **MPC 37.7 mm** | — | — | SAC ✗ off plate · LQR+SAC 42.9 mm |
 
 Every number is the output of one command pair (n=20 episodes on the stochastic
 tasks; deterministic tasks are seed-invariant single measurements, marked as such):
@@ -165,7 +165,7 @@ Measured in simulation (deterministic, from the test suite / demos):
 | RL insertion env — behaviour cloning (state) | **~70%** (head-to-head vs classical 100%) |
 | Reach — BC vs **ACT** (learned, vision + state) | BC **~95%** / ACT **~80%** success |
 | Compliant (admittance) contact | **27 N** vs **217 N** for rigid control pressing the same depth (~8× softer) |
-| Articulated manipulation | drawer **~77 mm** open, cabinet door **~40°**, valve **~75°** |
+| Articulated manipulation | drawer **~95 mm** open (frontal grasp), cabinet door **~54°**, valve **~78°** |
 | Cloth fold (single-arm) | folds in half — **~44%** span reduction, lays in self-colliding layers |
 
 ---
@@ -399,7 +399,7 @@ openarm bimanual --mode language "transfer the red block to the left bin"   # be
 openarm bimanual --mode language --interactive   # type bimanual commands live
 
 openarm showcase                   # grand tour: sort→plan→bimanual→servo→catch→stack→insert→mimic
-openarm test                       # headless test suite (164 tests)
+openarm test                       # headless test suite (165 tests)
 ```
 
 Every command documents its flags in `openarm list`; run `openarm <command> --help`
@@ -449,7 +449,7 @@ openarm_mujoco-master/
 ├── scripts/                     # fetch_models.py, gen_showcase_media.py (GIF/PNG renders)
 ├── demos/                       # trained policies (reach_act.pt, *_bc.pt) — datasets regenerate
 ├── media/                       # showcase GIFs + screenshots (rendered headless)
-├── tests/                       # headless pytest suite (164 tests)
+├── tests/                       # headless pytest suite (165 tests)
 ├── docs/IMPLEMENTATION_LOG.md   # detailed build/change history (verified numbers)
 ├── docs/ROADMAP_EXTENSIONS.md   # the post-v1 extension arc (F1..E1)
 ├── docs/MODELS.md               # what's versioned vs auto-downloaded vs regenerable

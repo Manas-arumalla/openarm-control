@@ -101,13 +101,13 @@ models and appends their rows when present.
 
 - **Insertion (peg-in-hole):** classical (scripted) **100%** vs behaviour cloning **~70%**.
 - **Reach:** behaviour cloning **~95%** vs ACT (vision+state) **~80%**.
-- **Articulated:** drawer **~77 mm**, door **~40°**, valve **~75°** opened (classical).
+- **Articulated:** drawer **~95 mm** (frontal grasp), door **~54°**, valve **~78°** opened (classical).
 - **Admittance:** compliant **27 N** vs rigid **217 N** pressing the same depth (~8× softer).
 - **Cloth fold:** **~44%** span reduction (single-arm, self-colliding flex cloth).
 - **Ball balance:** PD / LQR / MPC / SAC / LQR+SAC on the same tilting-plate physics.
-  Static hold: PD **0.44**, LQR **0.39**, MPC **0.39**, LQR+SAC **5.9 mm**; SAC
+  Static hold: PD **0.44**, LQR **0.39**, MPC **0.39**, LQR+SAC **5.2 mm**; SAC
   from-scratch fails (ball off plate). Circle track (r=4 cm, T=2.5 s):
-  PD **40.3**, LQR **39.2**, **MPC 37.7**, LQR+SAC **43.2 mm**. See
+  PD **40.3**, LQR **39.2**, **MPC 37.7**, LQR+SAC **42.9 mm**. See
   [`../docs/IMPLEMENTATION_LOG.md`](../docs/IMPLEMENTATION_LOG.md)
   for the training curves.
 

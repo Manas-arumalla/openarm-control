@@ -77,7 +77,7 @@ use for grasp welds, so the plate's resting pose vs gripper is captured exactly.
          into place before activating the weld and before the user takes control. -->
     <body name="plate" pos="0.30 -0.10 1.20">
       <joint name="plate_free" type="free"/>
-      <inertial pos="0 0 0" mass="0.05" diaginertia="3.8e-4 3.8e-4 7.5e-4"/>
+      <inertial pos="0 0 0" mass="0.05" diaginertia="9.42e-5 9.42e-5 1.875e-4"/>
       <geom name="plate_top"   type="box" size="0.075 0.075 0.005" pos="0 0 0"
             rgba="0.35 0.55 0.85 1" contype="1" conaffinity="1"
             condim="6" friction="0.4 0.005 0.0002"

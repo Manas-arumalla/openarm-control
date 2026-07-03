@@ -48,7 +48,7 @@ def free_cam(lookat, dist, azim, elev):
 
 # Per-skill 3/4 free-camera presets (lookat xyz, distance, azimuth, elevation).
 CAMS = {
-    "drawer":     ([0.29, -0.20, 0.46], 0.58, 150, -13),
+    "drawer":     ([0.34, -0.18, 0.50], 0.95, 205, -14),
     "door":       ([0.30, 0.10, 0.48], 1.10, 150, -18),
     "valve":      ([0.28, -0.05, 0.47], 1.00, 150, -18),
     "cloth":      ([0.25, -0.10, 0.45], 0.95, 135, -22),

@@ -16,7 +16,7 @@ Verify the install:
 
 ```bash
 openarm list           # all CLI commands
-openarm test           # the headless test suite (≈164 tests)
+openarm test           # the headless test suite (≈165 tests)
 ```
 
 ## Running the tests

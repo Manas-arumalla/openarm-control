@@ -24,6 +24,17 @@ def topdown_orientation(yaw):
                      [0.0, 0.0, 1.0]])
 
 
+def front_orientation(pitch=0.0):
+    """Rotation matrix for a gripper pointing world +x, pitched down by
+    ``pitch`` (rad), with the closing axis in the vertical plane -- the cage
+    straddles a horizontal handle bar top/bottom. Used for frontal grasps
+    (e.g. pulling a drawer toward the robot the way a human would)."""
+    c, sn = np.cos(pitch), np.sin(pitch)
+    return np.array([[0.0,  sn, -c],
+                     [-1.0, 0.0, 0.0],
+                     [0.0,  c,  sn]])
+
+
 class GraspSolver:
     """Finds reachable top-down grasp configurations at the grasp point."""
 

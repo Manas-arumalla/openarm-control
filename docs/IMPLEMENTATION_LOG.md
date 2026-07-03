@@ -2002,3 +2002,71 @@ python scripts/finetune.py \
 The free fallback if WSL2 is undesirable is **Google Colab (free T4, 16 GB VRAM)** —
 JAX-CUDA works there out of the box; the friction is uploading the RLDS dataset
 to Drive once and surviving the ~4 h idle-session reset by checkpointing.
+
+## Task-scene and articulated-skill refinements (upstream contribution round-trip)
+
+Contributing the task scenes to the upstream OpenArm model repository
+(enactic/openarm_mujoco PR #40) triggered a deep validation pass — driving
+every task with the arm rather than trusting static checks — and the fixes
+that came out of it are folded back here.
+
+### Scene fixes (`articulated_scene.xml`, `balance_scene.xml`)
+- **Door hinge no longer binds.** The panel's inner edge overlapped the hinge
+  post's diagonal half-width and ground against it through the swing (the old
+  "door ~40 deg" bench number was achieved *through* that friction). Post
+  slimmed to 7 mm, panel offset 15 mm from the axis, and the hinge got a
+  crisp limit (`solreflimit 0.005`) — the grinding had been masking a soft
+  range-limit overshoot under force.
+- **Drawer redesigned for a real grasp.** The cabinet sits on a solid base
+  (handle at a natural ~10 cm above the table) and the handle bar stands
+  40 mm proud on two stems: a parallel gripper's closed cage is 30 mm wide,
+  taller than the drawer's 56 mm front panel, so closing on a flush handle
+  fouls on the panel and never wraps the bar. The cabinet moved to
+  (0.40, -0.28) — clear of the ready-pose gripper's resting zone (a
+  regression test now pins this: `test_ready_keyframe_clear_of_arms`).
+- **Valve clearance.** At (0.26, -0.05) the full ±3 rad sweep stays clear of
+  both parked arms and the taller cabinet.
+- **Balance plate inertia** was 4x too large (computed from full dimensions
+  instead of half-extents); corrected to 9.42e-5 / 9.42e-5 / 1.875e-4.
+
+### Controller fixes (`articulated.py`, `grasp.py`)
+- **Deterministic skills.** IK random restarts were unseeded, so a skill
+  could land on a different arm branch every run — the frontal drawer pull
+  measured 4.1 / 52.1 / 92.5 mm across three identical runs. Restart-using
+  call sites now pass a fixed `IK_BRANCH_SEED`; every skill is bit-identical
+  run to run.
+- **Cartesian-chained approaches.** A single joint-space hop to a hover point
+  takes a curved detour that swept the fingers through neighbouring fixtures
+  (measured: outer finger 1.4-2.5 mm into the cabinet en route to the valve).
+  Approaches now reorient overhead in place, translate straight at height,
+  and descend vertically on one chained IK branch — zero fixture contact
+  across all three skills, audited every physics step.
+- **Grasps read as grasps.** The servo settles on the handle before the weld
+  activates (welding early froze a visible offset — the gripper "pulled air"
+  ahead of the handle), and the fingers close slowly and visibly first.
+- **Frontal drawer pull.** `open_drawer` approaches the handle horizontally
+  at a 15-degree downward pitch (`front_orientation` in grasp.py), slides the
+  half-open cage over the bar, applies a one-step bias correction, closes,
+  welds, and pulls the drawer straight back toward the robot before releasing
+  and withdrawing — the way a person opens a drawer.
+- **Skills release and retreat.** Each skill now deactivates its grasp weld
+  and withdraws at the end; previously the weld stayed active, silently
+  dragging the fixture during the next skill of a multi-step command.
+
+### Verified numbers (bench re-run, 165 tests green)
+| skill | before | after |
+|---|---|---|
+| drawer opened | 76.6 mm (top-down grasp) | **95.1 mm** (frontal grasp) |
+| door swung | 40.4 deg (through hinge grinding) | **54.1 deg** (free hinge) |
+| valve turned | 74.9 deg | **78.1 deg** (zero-contact approach) |
+
+Balance classical numbers unchanged (the plate is kinematically pinned, so
+its inertia does not enter the loop); the LQR+SAC residual cells shifted
+marginally with the corrected plate inertia (5.9 -> 5.2 mm static,
+43.2 -> 42.9 mm circle).
+
+Deliberately NOT adopted from the upstream variant: the valve's separate
+scene (the language-commanded "open the drawer then turn the valve" needs
+all fixtures in one scene) and the hollow-ball inertia (the balance stack is
+derived around the solid-sphere 5/7 factor; switching is a coordinated
+change across G_EFF, controllers, tests, and bench, kept as future work).
