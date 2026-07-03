@@ -166,13 +166,17 @@ class OpenArmKinematics:
     def inverse_kinematics(self, target_pos, target_mat=None, q_init=None,
                            max_iters=IK_MAX_ITERS, tol=IK_TOLERANCE,
                            damping=IK_DAMPING, restarts=IK_RESTARTS,
-                           rest_weight=IK_REST_WEIGHT, return_info=False, seed=None):
+                           rest_weight=IK_REST_WEIGHT, return_info=False, seed=0):
         """Robust IK to the tool point.
 
         Tries the supplied seed, the current pose, and the rest pose first, then
-        random restarts until a seed converges within ``tol``. Returns the joint
-        solution (and, if ``return_info``, a dict with success/error/iterations).
-        State is restored on exit.
+        random restarts until a seed converges within ``tol``. Restart sampling
+        is seeded (``seed=0``) so identical queries return identical branches --
+        an unseeded default made whole skills nondeterministic (a drawer pull
+        once measured 4-92 mm across identical runs). Pass ``seed=None`` for
+        stochastic restarts. Returns the joint solution (and, if
+        ``return_info``, a dict with success/error/iterations). State is
+        restored on exit.
         """
         target_pos = np.asarray(target_pos, dtype=float)
         if target_mat is not None:
