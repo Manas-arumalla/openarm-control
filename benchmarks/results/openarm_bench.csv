@@ -3,7 +3,7 @@ insertion,classical,success,1.0
 insertion,BC,success,0.7
 reach,BC,success,0.95
 reach,ACT,success,0.8
-articulated:drawer,classical,opened (mm),95.1
+articulated:drawer,classical,opened (mm),83.8
 articulated:door,classical,opened (deg),53.7
 articulated:valve,classical,opened (deg),78.1
 admittance,compliant,contact force (N),20.5

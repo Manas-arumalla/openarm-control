@@ -34,6 +34,17 @@ def _ik_nominal(king, *args, **kwargs):
     q, _ = king.inverse_kinematics(*args, return_info=True, **kwargs)
     return q
 
+
+def _same_branch(qn, q, limit=0.5):
+    """Accept a chained waypoint only if it stays on the current arm branch.
+
+    The frontal family's targets are off-manifold, so a chained solve can
+    wander to a mirrored elbow/wrist configuration (measured: a 3.5 rad flip
+    between consecutive advance waypoints, which renders as the arm snapping
+    back mid-approach). Skipping the flipped waypoint keeps the motion on
+    one branch; the drive interpolates through the gap."""
+    return qn is not None and float(np.abs(qn - q).max()) <= limit
+
 # Fixed seed for IK random restarts inside the skills: restart sampling is
 # otherwise unseeded, so a skill could land on a different arm branch every
 # run (measured: the frontal drawer pull varied 4-92 mm run to run).
@@ -197,9 +208,18 @@ class ArticulatedController:
         u = np.array([np.cos(th), 0.0, -np.sin(th)])   # finger direction
         half_open = 0.5 * a.arm.gripper_open           # full open can graze the cabinet top
         pre = grasp - 0.10 * u
+        # Pick the arm branch by the HARDEST pose of the whole motion -- the
+        # end of the pull, closest to the robot -- then back-chain the
+        # pre-approach onto that branch. Choosing the branch at the pre pose
+        # lands on one that cannot finish the advance (the chain visibly flips
+        # 3.5 rad mid-approach); choosing it at the grasp truncates the pull.
+        q_deep = _ik_nominal(a.king, grasp + [-distance, 0, 0], target_mat=R,
+                             q_init=self.data.qpos[a.king.qpos_indices], restarts=3,
+                             seed=IK_BRANCH_SEED)
+        if q_deep is None:
+            return False
         q = _ik_nominal(a.king, pre, target_mat=R,
-                        q_init=self.data.qpos[a.king.qpos_indices], restarts=3,
-                        seed=IK_BRANCH_SEED)
+                        q_init=q_deep, restarts=0, rest_weight=0.0)
         if q is None:
             return False
         self._drive(a, other, [q], 1.8, grip=half_open, viewer=viewer, dt_realtime=dt_realtime)
@@ -209,7 +229,7 @@ class ArticulatedController:
         for t in np.linspace(0, 1, 7)[1:]:
             qn = _ik_nominal(a.king, pre + t * 0.10 * u, target_mat=R,
                              q_init=q, restarts=0, rest_weight=0.0)
-            if qn is not None:
+            if _same_branch(qn, q):
                 q = qn
                 adv.append(q.copy())
         self._drive(a, other, adv, 1.6, grip=half_open, viewer=viewer, dt_realtime=dt_realtime)
@@ -221,7 +241,7 @@ class ArticulatedController:
         if np.linalg.norm(bias) > 0.002:
             qn = _ik_nominal(a.king, grasp + bias, target_mat=R,
                              q_init=q, restarts=0, rest_weight=0.0)
-            if qn is not None:
+            if _same_branch(qn, q):
                 q = qn
                 self._drive(a, other, [q], 0.8, grip=half_open, viewer=viewer, dt_realtime=dt_realtime)
                 self._drive(a, other, [q], 0.4, grip=half_open, viewer=viewer, dt_realtime=dt_realtime)
@@ -233,17 +253,34 @@ class ArticulatedController:
         for t in np.linspace(0, 1, 12)[1:]:
             qn = _ik_nominal(a.king, grasp + [-distance * t, 0, 0] + bias, target_mat=R,
                              q_init=q, restarts=0, rest_weight=0.0)
-            if qn is not None:
+            if _same_branch(qn, q):
                 q = qn
                 pull.append(q.copy())
         self._drive(a, other, pull, 3.0, grip=a.arm.gripper_closed, viewer=viewer, dt_realtime=dt_realtime)
         self._drive(a, other, [q], 0.5, grip=a.arm.gripper_closed, viewer=viewer, dt_realtime=dt_realtime)
+        # The nominal family's bias grows toward the robot, so the commanded
+        # path can under-pull. Keep pulling closed-loop on the actual slide
+        # reading until the drawer is open (or the workspace runs out).
+        jd = self.model.jnt_qposadr[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, "drawer_slide")]
+        extra = 0.0
+        while abs(float(self.data.qpos[jd])) < distance - 0.005 and extra < 0.12:
+            extra += 0.015
+            qn = _ik_nominal(a.king, grasp + [-distance - extra, 0, 0] + bias, target_mat=R,
+                             q_init=q, restarts=0, rest_weight=0.0)
+            if not _same_branch(qn, q):
+                break
+            q = qn
+            before = abs(float(self.data.qpos[jd]))
+            self._drive(a, other, [q], 0.5, grip=a.arm.gripper_closed, viewer=viewer, dt_realtime=dt_realtime)
+            if abs(float(self.data.qpos[jd])) - before < 0.001:
+                break    # pull has saturated; stop instead of stalling on camera
+        self._drive(a, other, [q], 0.4, grip=a.arm.gripper_closed, viewer=viewer, dt_realtime=dt_realtime)
         eid = a._weld_id("drawer")
         if eid >= 0:
             self.data.eq_active[eid] = 0
         back = _ik_nominal(a.king, grasp + [-distance - 0.08, 0, 0], target_mat=R,
                            q_init=q, restarts=0, rest_weight=0.0)
-        if back is not None:
+        if _same_branch(back, q, limit=0.8):
             self._drive(a, other, [back], 1.0, grip=a.arm.gripper_open, viewer=viewer, dt_realtime=dt_realtime)
         return True
 

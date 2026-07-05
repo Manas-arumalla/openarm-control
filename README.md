@@ -81,7 +81,7 @@ cloning · ACT (vision) · SAC · LQR+SAC residual**.
 |---|---|---|---|---|
 | **Peg insertion** — success, n=20, randomized socket/offset/friction | **100 %** | 70 % | — | — |
 | **Reach** — success, n=20, random targets | — | **95 %** | 80 % | — |
-| **Drawer** — opened, frontal grasp (deterministic) | **95 mm** | — | — | — |
+| **Drawer** — opened, frontal grasp (deterministic) | **84 mm** | — | — | — |
 | **Door** — swung (deterministic) | **54°** | — | — | — |
 | **Valve** — turned (deterministic) | **78°** | — | — | — |
 | **Compliant press** — steady contact force (deterministic) | **20 N** (rigid: 64 N) | — | — | — |
@@ -165,7 +165,7 @@ Measured in simulation (deterministic, from the test suite / demos):
 | RL insertion env — behaviour cloning (state) | **~70%** (head-to-head vs classical 100%) |
 | Reach — BC vs **ACT** (learned, vision + state) | BC **~95%** / ACT **~80%** success |
 | Compliant (admittance) contact | **20 N** vs **64 N** for rigid control pressing the same depth (~3× softer) |
-| Articulated manipulation | drawer **~95 mm** open (frontal grasp), cabinet door **~54°**, valve **~78°** |
+| Articulated manipulation | drawer **~84 mm** open (frontal grasp), cabinet door **~54°**, valve **~78°** |
 | Cloth fold (single-arm) | folds in half — **~44%** span reduction, lays in self-colliding layers |
 
 ---

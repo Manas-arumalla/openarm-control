@@ -2105,3 +2105,17 @@ Two fixes surfaced by an adversarial re-review of the task scenes.
 The compliant-vs-rigid contrast the admittance row demonstrates is
 controller behaviour, and it survives: same press depth, ~3× lower steady
 force with admittance.
+
+### Drawer approach: one branch, no snap (same day)
+
+The drawer GIF showed the arm turning toward the handle and then snapping
+3.5 rad back to a mirrored configuration mid-approach — the advance chain
+was silently flipping IK branches, and the measured 95 mm pull only worked
+*through* that flip. The skill now picks its arm branch once, from the
+hardest pose of the motion (the end of the pull), back-chains the
+pre-approach onto it, rejects any chained waypoint that leaves the branch
+(>0.5 rad jump), and finishes the pull closed-loop on the actual slide
+reading. The motion is now a single smooth branch (worst inter-waypoint
+step 0.069 rad); the honest cost is a shorter pull: **95.1 -> 83.8 mm**
+(this branch's reachable ceiling; the drawer's slide range is 100 mm).
+Full suite green; drawer GIF regenerated.
