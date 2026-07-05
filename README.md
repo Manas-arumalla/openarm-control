@@ -7,6 +7,10 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![Status](https://img.shields.io/badge/status-research--grade%20sim-blueviolet)
 
+<p align="center"><img height="340" alt="A thrown ball caught mid-flight" src="media/catch_demo.gif" /></p>
+<p align="center"><i>A thrown ball, seen by two cameras, caught mid-flight —
+<a href="#spotlight-catching-a-ball-thrown-through-the-air">how it works</a>.</i></p>
+
 A control, motion-planning, bimanual-coordination, and reinforcement-learning
 platform for the **Enactic OpenArm v2** (7-DOF × 2 + grippers) in
 [MuJoCo](https://mujoco.org/).
@@ -26,8 +30,6 @@ insertion suite** (classical vs BC vs RL), and a unified **OpenArm-Bench**.
 > **[ROADMAP.md](ROADMAP.md)** for the full plan.
 
 > **Related:** [manipdyn](https://github.com/Manas-arumalla/manipdyn) — the single-arm UR5e methods lab where this benchmark approach originated.
-
-<p align="center"><img height="420" alt="OpenArm v2" src="media/v2.png" /></p>
 
 ---
 
