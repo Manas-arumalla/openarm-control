@@ -82,14 +82,15 @@ use for grasp welds, so the plate's resting pose vs gripper is captured exactly.
             rgba="0.35 0.55 0.85 1" contype="1" conaffinity="1"
             condim="6" friction="0.4 0.005 0.0002"
             solref="0.005 1" solimp="0.95 0.99 0.001"/>
-      <!-- Riser rod: a thin vertical cylinder attached to the plate, extending
-           DOWN to the gripper. Visual only (contype/conaffinity=0) so it can
+      <!-- Stem: a thin vertical cylinder attached under the plate, reaching
+           down into the closed finger cage (the plate seats with this stem at
+           the fingertip grasp point). Visual only (contype/conaffinity=0) so it can
            pass through arm bodies without dynamics interaction. Reads as
            "the gripper holds a table on a stem" -- necessary because the arm's
            link4/5/6 occupy the palm-adjacent space in the ready pose and
            there is no reachable joint config that gives a clear plate volume
            above the palm. -->
-      <geom name="plate_riser" type="cylinder" size="0.008 0.060" pos="0 0 -0.065"
+      <geom name="plate_riser" type="cylinder" size="0.008 0.030" pos="0 0 -0.035"
             rgba="0.60 0.60 0.65 1" contype="0" conaffinity="0" group="2"/>
     </body>
 

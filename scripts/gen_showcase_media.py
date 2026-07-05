@@ -58,8 +58,8 @@ CAMS = {
     # Balance scenes: plate is 12 cm above the gripper (via a visible riser
     # rod) at world z ~0.795. A moderate 3/4 view shows the arm below, riser
     # extending up, plate + ball on top.
-    "balance_circle":  ([0.24, -0.22, 0.75], 0.85, 150, -18),
-    "balance_perturb": ([0.24, -0.22, 0.75], 0.85, 150, -18),
+    "balance_circle":  ([0.26, -0.20, 0.62], 0.72, 145, -14),
+    "balance_perturb": ([0.26, -0.20, 0.62], 0.72, 145, -14),
 }
 
 
@@ -195,7 +195,39 @@ def _run_balance(kind):
     from openarm_control.demos.demo_balance import _target_at, _apply_perturbation
     m, d = _keyframe_load(BALANCE_SCENE)
     bal = LQRBalancer(m, d)
+    # Pose the right arm in the hanging "home" configuration (elbow 90 deg,
+    # gripper forward-down, clear of the other links) BEFORE capturing the
+    # hold: in the scene's ready pose the wrist links occupy the space right
+    # where an in-gripper plate would sit, and the render looks skewered.
+    home_q = np.array([0.0, 0.0, 0.0, 1.570796, 0.0, 0.0, 0.0])
+    d.qpos[bal.right.king.qpos_indices] = home_q
+    d.qvel[bal.right.king.dof_indices] = 0.0
+    for i, act in enumerate(bal.right.arm_acts):
+        d.ctrl[act] = home_q[i]
+    mujoco.mj_forward(m, d)
     bal.setup_hold()
+    # Re-seat the plate with its stem IN the gripper (fingertip grasp point,
+    # fingers closed) instead of floating above the wrist -- same physics,
+    # honest grip visual. setup_hold itself is untouched so the bench, tests
+    # and RL envs keep their exact validated behaviour.
+    gp, _ = bal.right.king.forward_kinematics()
+    plate_pos = gp + np.array([0.0, 0.0, 0.045])   # stem spans the finger cage
+    d.qpos[bal.plate_qadr:bal.plate_qadr + 3] = plate_pos
+    d.qpos[bal.plate_qadr + 3:bal.plate_qadr + 7] = [1, 0, 0, 0]
+    d.qvel[bal.plate_dadr:bal.plate_dadr + 6] = 0.0
+    mujoco.mj_forward(m, d)
+    p1 = d.xpos[bal.right.ee_body].copy(); q1 = d.xquat[bal.right.ee_body].copy()
+    p2 = d.xpos[bal.plate_bid].copy();     q2 = d.xquat[bal.plate_bid].copy()
+    nq1 = np.zeros(4); mujoco.mju_negQuat(nq1, q1)
+    relpos = np.zeros(3); mujoco.mju_rotVecQuat(relpos, p2 - p1, nq1)
+    relquat = np.zeros(4); mujoco.mju_mulQuat(relquat, nq1, q2)
+    bal._gripper_to_plate_relpos = relpos.copy()
+    bal._gripper_to_plate_relquat = relquat.copy()
+    bal.model.eq_data[bal.weld_eid, 3:6] = relpos
+    bal.model.eq_data[bal.weld_eid, 6:10] = relquat
+    bal._plate_centre_fixed = d.xpos[bal.plate_bid].copy()
+    if bal.right.grip_act != -1:
+        d.ctrl[bal.right.grip_act] = 0.0           # fingers closed on the stem
     bal.reset(ball_offset_xy=(0.0, 0.0), settle_steps=400)
     cam = free_cam(*CAMS[f"balance_{kind}"])
     cap = FrameCapture(m, d, cam, stride=6)
