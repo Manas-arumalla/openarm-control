@@ -2070,3 +2070,38 @@ scene (the language-commanded "open the drawer then turn the valve" needs
 all fixtures in one scene) and the hollow-ball inertia (the balance stack is
 derived around the solid-sphere 5/7 factor; switching is a coordinated
 change across G_EFF, controllers, tests, and bench, kept as future work).
+
+## Contact honesty + IK contract (2026-07-05)
+
+Two fixes surfaced by an adversarial re-review of the task scenes.
+
+- **The contact pad's softness was inert.** The arm's collision geoms carry
+  `priority="1"`, and MuJoCo gives *all* contact parameters to the
+  higher-priority geom — so finger–pad contacts used the finger's rigid
+  `solref="0.005 1"` and the pad's authored `solref="0.05 1"` never governed
+  a press (first contact jumped ~98 N in a single 1 ms step). Fix:
+  `priority="2"` on `pad_geom` in `contact_scene.xml`. A press now rises
+  smoothly (max per-step jump ~7 N).
+- **`inverse_kinematics` returned non-converged solves as if they were
+  solutions.** The plain return handed back the best attempt even when it
+  missed by tens of centimetres, so callers' `if q is None` guards almost
+  never fired. It now returns `None` when the best solve misses by more than
+  `IK_ACCEPT` (5 mm — task scale; measured caller regimes: chained waypoints
+  reject at 0.1–4.6 mm and are functionally exact, garbage solves sit at
+  97–131 mm). `return_info` still reports strict 0.1 mm convergence.
+  One deliberate opt-out: the drawer's frontal approach family is off the
+  reachable manifold by design (~13 cm nominal bias, absorbed by the skill's
+  measured one-step bias correction) and now requests best-effort explicitly
+  (`_ik_nominal` in articulated.py).
+
+### Verified numbers (full suite green, full bench re-run)
+| cell | before | after | why |
+|---|---|---|---|
+| admittance compliant | 27.6 N | **20.5 N** | pad genuinely soft now |
+| admittance rigid | 213.1 N | **63.9 N** | same (even a rigid press reads lower on a soft pad) |
+| door swung | 54.1 deg | **53.7 deg** | one arc waypoint with a 12.3 mm best solve is now skipped instead of commanded |
+| drawer / valve / all other cells | — | unchanged | drawer byte-identical at 95.1 mm |
+
+The compliant-vs-rigid contrast the admittance row demonstrates is
+controller behaviour, and it survives: same press depth, ~3× lower steady
+force with admittance.

@@ -84,7 +84,7 @@ cloning · ACT (vision) · SAC · LQR+SAC residual**.
 | **Drawer** — opened, frontal grasp (deterministic) | **95 mm** | — | — | — |
 | **Door** — swung (deterministic) | **54°** | — | — | — |
 | **Valve** — turned (deterministic) | **78°** | — | — | — |
-| **Compliant press** — steady contact force (deterministic) | **27 N** (rigid: 213 N) | — | — | — |
+| **Compliant press** — steady contact force (deterministic) | **20 N** (rigid: 64 N) | — | — | — |
 | **Cloth fold** — span reduction (deterministic) | **44 %** | — | — | — |
 | **Ball balance, static** — settle error (deterministic) | PD 0.44 / LQR 0.39 / **MPC 0.39 mm** | — | — | SAC ✗ off plate · LQR+SAC 5.2 mm |
 | **Ball balance, circle** — tracking RMS (deterministic) | PD 40.3 / LQR 39.2 / **MPC 37.7 mm** | — | — | SAC ✗ off plate · LQR+SAC 42.9 mm |
@@ -164,7 +164,7 @@ Measured in simulation (deterministic, from the test suite / demos):
 | RL insertion env — classical (scripted) | **100%** inserted across randomized sockets, ~1.5 mm |
 | RL insertion env — behaviour cloning (state) | **~70%** (head-to-head vs classical 100%) |
 | Reach — BC vs **ACT** (learned, vision + state) | BC **~95%** / ACT **~80%** success |
-| Compliant (admittance) contact | **27 N** vs **217 N** for rigid control pressing the same depth (~8× softer) |
+| Compliant (admittance) contact | **20 N** vs **64 N** for rigid control pressing the same depth (~3× softer) |
 | Articulated manipulation | drawer **~95 mm** open (frontal grasp), cabinet door **~54°**, valve **~78°** |
 | Cloth fold (single-arm) | folds in half — **~44%** span reduction, lays in self-colliding layers |
 

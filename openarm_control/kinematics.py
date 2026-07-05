@@ -14,7 +14,7 @@ import mujoco
 import numpy as np
 
 from .config import (
-    RIGHT_ARM_JOINTS, RIGHT_EE_SITE, IK_MAX_ITERS, IK_TOLERANCE,
+    RIGHT_ARM_JOINTS, RIGHT_EE_SITE, IK_MAX_ITERS, IK_TOLERANCE, IK_ACCEPT,
     IK_DAMPING, IK_RESTARTS, IK_REST_WEIGHT, IK_MAX_STEP,
 )
 
@@ -166,7 +166,8 @@ class OpenArmKinematics:
     def inverse_kinematics(self, target_pos, target_mat=None, q_init=None,
                            max_iters=IK_MAX_ITERS, tol=IK_TOLERANCE,
                            damping=IK_DAMPING, restarts=IK_RESTARTS,
-                           rest_weight=IK_REST_WEIGHT, return_info=False, seed=0):
+                           rest_weight=IK_REST_WEIGHT, return_info=False, seed=0,
+                           accept=IK_ACCEPT):
         """Robust IK to the tool point.
 
         Tries the supplied seed, the current pose, and the rest pose first, then
@@ -174,8 +175,13 @@ class OpenArmKinematics:
         is seeded (``seed=0``) so identical queries return identical branches --
         an unseeded default made whole skills nondeterministic (a drawer pull
         once measured 4-92 mm across identical runs). Pass ``seed=None`` for
-        stochastic restarts. Returns the joint solution (and, if
-        ``return_info``, a dict with success/error/iterations). State is
+        stochastic restarts. Returns the joint solution, or ``None`` when the
+        best attempt misses by more than ``accept`` (task scale, 5 mm): a
+        few-mm best-effort waypoint in a chained path is functionally exact,
+        but a solve tens of centimetres off is a failure, and returning it as
+        a solution would defeat every ``if q is None`` guard in the callers.
+        With ``return_info``, returns the best attempt regardless plus a dict
+        whose ``success`` reports strict ``tol`` convergence. State is
         restored on exit.
         """
         target_pos = np.asarray(target_pos, dtype=float)
@@ -209,4 +215,4 @@ class OpenArmKinematics:
         if return_info:
             return best_q, {"success": bool(best_err < tol),
                             "error": float(best_err), "seeds_tried": n_tried}
-        return best_q
+        return best_q if best_err < accept else None

@@ -67,8 +67,12 @@ and the F2 test; the contact-rich skills are built on this controller in S3.
          constant makes the contact force rise smoothly, so the arm can press on it
          and the admittance controller can yield gracefully. -->
     <body name="pad" pos="0.22 -0.20 0.40">
+      <!-- priority 2 outranks the arm geoms' collision class (priority 1), so the
+           pad's soft solref governs finger-pad contacts -- MuJoCo gives all contact
+           parameters to the higher-priority geom, and without this the fingers'
+           rigid solref (0.005) silently wins and the pad's softness is inert. -->
       <geom name="pad_geom" type="box" size="0.06 0.06 0.03" pos="0 0 0.03"
-            rgba="0.25 0.6 0.35 1" contype="1" conaffinity="1"
+            rgba="0.25 0.6 0.35 1" contype="1" conaffinity="1" priority="2"
             solref="0.05 1" solimp="0.7 0.9 0.02" friction="1 0.01 0.01"/>
     </body>
   </worldbody>

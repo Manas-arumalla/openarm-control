@@ -111,6 +111,10 @@ GRIPPER_CLOSED_CTRL = 0.0
 # IK & Control defaults
 IK_MAX_ITERS = 200
 IK_TOLERANCE = 1e-4          # 0.1 mm position convergence
+IK_ACCEPT = 5e-3             # 5 mm: worst best-effort solve still returned as a
+                             # solution (task scale -- few-mm chained waypoints are
+                             # functionally exact; a solve tens of cm off is a
+                             # failure and returns None)
 IK_DAMPING = 5e-2            # initial Levenberg-Marquardt damping (adaptive)
 IK_RESTARTS = 24             # random restarts before giving up
 IK_REST_WEIGHT = 0.02        # nullspace pull toward rest pose (redundancy resolution)

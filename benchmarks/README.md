@@ -102,7 +102,7 @@ models and appends their rows when present.
 - **Insertion (peg-in-hole):** classical (scripted) **100%** vs behaviour cloning **~70%**.
 - **Reach:** behaviour cloning **~95%** vs ACT (vision+state) **~80%**.
 - **Articulated:** drawer **~95 mm** (frontal grasp), door **~54°**, valve **~78°** opened (classical).
-- **Admittance:** compliant **27 N** vs rigid **217 N** pressing the same depth (~8× softer).
+- **Admittance:** compliant **20 N** vs rigid **64 N** pressing the same depth (~3× softer; the pad itself is genuinely soft now, so even the rigid press reads far lower than it used to).
 - **Cloth fold:** **~44%** span reduction (single-arm, self-colliding flex cloth).
 - **Ball balance:** PD / LQR / MPC / SAC / LQR+SAC on the same tilting-plate physics.
   Static hold: PD **0.44**, LQR **0.39**, MPC **0.39**, LQR+SAC **5.2 mm**; SAC

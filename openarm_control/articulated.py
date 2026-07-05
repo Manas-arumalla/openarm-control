@@ -22,6 +22,18 @@ from .grasp import topdown_orientation, front_orientation
 from .pick_and_place import PickPlaceController
 from .trajectory import quintic_polynomial
 
+
+def _ik_nominal(king, *args, **kwargs):
+    """Best-effort IK for the frontal drawer pose family.
+
+    The exact front-pitched pose is off the reachable manifold (the best
+    solve carries a ~13 cm nominal bias), by design: the skill measures the
+    real tool position after the approach and re-commands shifted, so only
+    the family's consistency matters, not its absolute accuracy. The strict
+    inverse_kinematics return would reject the whole family as failed."""
+    q, _ = king.inverse_kinematics(*args, return_info=True, **kwargs)
+    return q
+
 # Fixed seed for IK random restarts inside the skills: restart sampling is
 # otherwise unseeded, so a skill could land on a different arm branch every
 # run (measured: the frontal drawer pull varied 4-92 mm run to run).
@@ -185,9 +197,9 @@ class ArticulatedController:
         u = np.array([np.cos(th), 0.0, -np.sin(th)])   # finger direction
         half_open = 0.5 * a.arm.gripper_open           # full open can graze the cabinet top
         pre = grasp - 0.10 * u
-        q = a.king.inverse_kinematics(pre, target_mat=R,
-                                      q_init=self.data.qpos[a.king.qpos_indices], restarts=3,
-                                      seed=IK_BRANCH_SEED)
+        q = _ik_nominal(a.king, pre, target_mat=R,
+                        q_init=self.data.qpos[a.king.qpos_indices], restarts=3,
+                        seed=IK_BRANCH_SEED)
         if q is None:
             return False
         self._drive(a, other, [q], 1.8, grip=half_open, viewer=viewer, dt_realtime=dt_realtime)
@@ -195,8 +207,8 @@ class ArticulatedController:
         # advance the open cage onto the handle bar (chained IK, one branch)
         adv = []
         for t in np.linspace(0, 1, 7)[1:]:
-            qn = a.king.inverse_kinematics(pre + t * 0.10 * u, target_mat=R,
-                                           q_init=q, restarts=0, rest_weight=0.0)
+            qn = _ik_nominal(a.king, pre + t * 0.10 * u, target_mat=R,
+                             q_init=q, restarts=0, rest_weight=0.0)
             if qn is not None:
                 q = qn
                 adv.append(q.copy())
@@ -207,8 +219,8 @@ class ArticulatedController:
         tool = self.data.site_xpos[site] + 0.135 * u
         bias = grasp - tool
         if np.linalg.norm(bias) > 0.002:
-            qn = a.king.inverse_kinematics(grasp + bias, target_mat=R,
-                                           q_init=q, restarts=0, rest_weight=0.0)
+            qn = _ik_nominal(a.king, grasp + bias, target_mat=R,
+                             q_init=q, restarts=0, rest_weight=0.0)
             if qn is not None:
                 q = qn
                 self._drive(a, other, [q], 0.8, grip=half_open, viewer=viewer, dt_realtime=dt_realtime)
@@ -219,8 +231,8 @@ class ArticulatedController:
         # pull straight back toward the robot, settle, release, withdraw
         pull = []
         for t in np.linspace(0, 1, 12)[1:]:
-            qn = a.king.inverse_kinematics(grasp + [-distance * t, 0, 0] + bias, target_mat=R,
-                                           q_init=q, restarts=0, rest_weight=0.0)
+            qn = _ik_nominal(a.king, grasp + [-distance * t, 0, 0] + bias, target_mat=R,
+                             q_init=q, restarts=0, rest_weight=0.0)
             if qn is not None:
                 q = qn
                 pull.append(q.copy())
@@ -229,8 +241,8 @@ class ArticulatedController:
         eid = a._weld_id("drawer")
         if eid >= 0:
             self.data.eq_active[eid] = 0
-        back = a.king.inverse_kinematics(grasp + [-distance - 0.08, 0, 0], target_mat=R,
-                                         q_init=q, restarts=0, rest_weight=0.0)
+        back = _ik_nominal(a.king, grasp + [-distance - 0.08, 0, 0], target_mat=R,
+                           q_init=q, restarts=0, rest_weight=0.0)
         if back is not None:
             self._drive(a, other, [back], 1.0, grip=a.arm.gripper_open, viewer=viewer, dt_realtime=dt_realtime)
         return True
