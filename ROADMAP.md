@@ -402,7 +402,7 @@ ROADMAP / implementation-log updates, and headless tests.
     the object→target line with the **closed gripper** at a reachable point-down
     orientation held continuously (`_ik_line_oriented`, so the wrist never rotates
     mid-push and flings it), and **re-aim after each stroke** until the object lands on
-    the goal. No weld, no grasp. `push_scene.xml` (slippery puck + two goal regions),
+    the goal. No weld, no grasp. `move_puck_scene.xml` (puck + two goal regions),
     parser `push` action, `openarm push [--goal a|b]`. Lands the puck **~30–40 mm** from
     the goal. Tests: parse-push, push-onto-each-goal (stays on the table).
   - **3b Tool use ✅ DONE.** `pushing.py` `ToolController`: grasp a stick (weld), record

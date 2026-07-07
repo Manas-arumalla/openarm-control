@@ -1,14 +1,14 @@
 <!--
 Copyright 2026 Enactic, Inc.
 Licensed under the Apache License, Version 2.0 (the "License").
-Non-prehensile pushing scene (Phase 3a): a low, slippery puck on the table and two
-goal regions. The robot does NOT grasp it -- it pushes the puck across the table to
-a goal with the closed gripper as a pusher, re-planning the push direction as the
-puck drifts. Demonstrates contact-rich, non-prehensile manipulation with classical
-control (no weld, no grasp).
+Move-a-puck scene (Phase 3a): a low puck on the table and two goal regions.
+The puck can be pushed to a goal with the closed gripper as a pusher (the
+non-prehensile skill this scene was built for, re-planning the push direction
+as the puck drifts) or grasped and placed -- a small target for either style
+of manipulation.
 -->
 
-<mujoco model="openarm_v20_push">
+<mujoco model="openarm_v20_move_puck">
   <compiler meshdir="assets" angle="radian"/>
 
   <default>

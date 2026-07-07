@@ -12,13 +12,13 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from openarm_control.config import PUSH_SCENE
+from openarm_control.config import MOVE_PUCK_SCENE
 from openarm_control.pushing import PushController
 from openarm_control.agent.commands import parse_command
 
 
 def _load():
-    model = mujoco.MjModel.from_xml_path(PUSH_SCENE)
+    model = mujoco.MjModel.from_xml_path(MOVE_PUCK_SCENE)
     data = mujoco.MjData(model)
     mujoco.mj_resetDataKeyframe(
         model, data, mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_KEY, "ready"))

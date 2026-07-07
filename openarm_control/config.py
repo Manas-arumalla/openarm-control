@@ -25,7 +25,8 @@ STACK_SCENE = os.path.join(V2_MODEL_DIR, "stack_scene.xml")
 PEG_SOCKET_SCENE = os.path.join(V2_MODEL_DIR, "peg_socket_scene.xml")
 PEG_SQUARE_SCENE = os.path.join(V2_MODEL_DIR, "peg_square_scene.xml")
 PEG_CUBOID_SCENE = os.path.join(V2_MODEL_DIR, "peg_cuboid_scene.xml")
-PUSH_SCENE = os.path.join(V2_MODEL_DIR, "push_scene.xml")
+MOVE_PUCK_SCENE = os.path.join(V2_MODEL_DIR, "move_puck_scene.xml")
+PUSH_SCENE = MOVE_PUCK_SCENE   # legacy alias (scene renamed to match upstream)
 TOOL_SCENE = os.path.join(V2_MODEL_DIR, "tool_scene.xml")
 CLOTH_SCENE = os.path.join(V2_MODEL_DIR, "cloth_scene.xml")
 BIMANUAL_STACK_SCENE = os.path.join(V2_MODEL_DIR, "bimanual_stack_scene.xml")
@@ -57,7 +58,8 @@ SCENES = {
     "peg_socket": PEG_SOCKET_SCENE,
     "peg_square": PEG_SQUARE_SCENE,
     "peg_cuboid": PEG_CUBOID_SCENE,
-    "push": PUSH_SCENE,
+    "move_puck": MOVE_PUCK_SCENE,
+    "push": MOVE_PUCK_SCENE,   # legacy alias
     "tool": TOOL_SCENE,
     "cloth": CLOTH_SCENE,
     "bimanual_stack": BIMANUAL_STACK_SCENE,
