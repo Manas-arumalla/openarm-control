@@ -299,6 +299,9 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="OpenArm-Bench: unified skill evaluation.")
     ap.add_argument("--quick", action="store_true", help="fewer episodes")
     ap.add_argument("--only", default=None, help="comma-separated subset: insertion,reach,articulated,admittance,balance,cloth")
+    ap.add_argument("--out", default=None,
+                    help="results CSV path (default: results/openarm_bench.csv; "
+                         "point subset runs elsewhere so they don't clobber the full table)")
     a = ap.parse_args(argv)
     n = 8 if a.quick else 20
     which = a.only.split(",") if a.only else ["insertion", "reach", "articulated", "admittance", "balance", "cloth"]
@@ -317,8 +320,8 @@ def main(argv=None):
     for skill, method, metric, result in rows:
         rv = f"{result:.0%}" if metric == "success" else f"{result}"
         print(f"{skill:<20}{method:<12}{metric:<24}{rv}")
-    os.makedirs(OUT_DIR, exist_ok=True)
-    out = os.path.join(OUT_DIR, "openarm_bench.csv")
+    out = a.out or os.path.join(OUT_DIR, "openarm_bench.csv")
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     with open(out, "w", newline="") as f:
         w = csv.writer(f); w.writerow(["skill", "method", "metric", "result"]); w.writerows(rows)
     print(f"\nresults -> {out}")

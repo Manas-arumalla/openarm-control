@@ -1,6 +1,21 @@
 skill,method,metric,result
+insertion,classical,success,1.0
+insertion,BC,success,0.7
+reach,BC,success,0.95
+reach,ACT,success,0.8
 articulated:drawer,classical,opened (mm),83.8
 articulated:door,classical,opened (deg),53.7
 articulated:valve,classical,opened (deg),78.1
 admittance,compliant,contact force (N),20.5
 admittance,rigid,contact force (N),63.9
+balance,PD,static final err (mm),0.44
+balance,PD,circle track RMS (mm),40.3
+balance,LQR,static final err (mm),0.39
+balance,LQR,circle track RMS (mm),39.16
+balance,MPC,static final err (mm),0.39
+balance,MPC,circle track RMS (mm),37.66
+balance,SAC,static final err (mm),100.0
+balance,SAC,circle track RMS (mm),100.0
+balance,LQR+SAC,static final err (mm),5.22
+balance,LQR+SAC,circle track RMS (mm),42.93
+cloth_fold,classical,y-span reduction (%),44.0

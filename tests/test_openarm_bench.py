@@ -17,8 +17,11 @@ sys.path.insert(0, os.path.join(PROJECT_ROOT, "benchmarks"))
 import openarm_bench
 
 
-def test_bench_runs_and_reports():
-    rows = openarm_bench.main(["--only", "articulated,admittance"])
+def test_bench_runs_and_reports(tmp_path):
+    # subset runs write to a temp CSV: they must never overwrite the
+    # versioned full results table in benchmarks/results/
+    out = str(tmp_path / "openarm_bench.csv")
+    rows = openarm_bench.main(["--only", "articulated,admittance", "--out", out])
     skills = {r[0] for r in rows}
     assert {"articulated:drawer", "articulated:door", "articulated:valve"} <= skills
     assert "admittance" in skills
@@ -26,7 +29,7 @@ def test_bench_runs_and_reports():
     forces = {m: v for s, m, mt, v in rows if s == "admittance"}
     assert forces["compliant"] < forces["rigid"], forces
     # the results CSV was written
-    assert os.path.exists(os.path.join(PROJECT_ROOT, "benchmarks", "results", "openarm_bench.csv"))
+    assert os.path.exists(out)
 
 
 if __name__ == "__main__":
