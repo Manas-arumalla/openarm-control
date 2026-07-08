@@ -14,11 +14,6 @@ holding is done by the stand.) The left arm stays parked.
 <mujoco model="openarm_v20_unscrew">
   <compiler meshdir="assets" angle="radian"/>
 
-  <default>
-    <default class="visual"><geom contype="0" conaffinity="0" group="2"/></default>
-    <default class="collision"><geom condim="3" conaffinity="1" priority="1" group="3" solref="0.005 1" friction="1 0.01 0.01"/></default>
-  </default>
-
   <statistic center="0.30 -0.05 0.55" extent="1.2" meansize="0.05"/>
   <option timestep="0.002"/>
 
@@ -35,10 +30,7 @@ holding is done by the stand.) The left arm stays parked.
       markrgb="0.6 0.6 0.6" width="300" height="300"/>
     <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
 
-    <mesh name="body_link0"      content_type="model/stl" file="visual/body/body_link0.stl"     scale="0.001 0.001 0.001"/>
-    <mesh name="body_link0_symp" content_type="model/stl" file="collision/body_link0_symp.stl" scale="0.001 0.001 0.001"/>
-
-    <model name="bimanual" file="openarm_v20_bimanual.xml"/>
+    <model name="arm_pedestal" file="openarm_pedestal.xml"/>
   </asset>
 
   <worldbody>
@@ -48,12 +40,7 @@ holding is done by the stand.) The left arm stays parked.
     <camera name="tablecam" pos="0.30 -0.05 1.25" xyaxes="1 0 0 0 1 0" fovy="58"/>
     <camera name="frontcam" pos="1.00 -0.05 0.90" xyaxes="0 -1 0 0.3 0 1" fovy="55"/>
 
-    <geom name="openarm_body_link0_visual"    type="mesh" mesh="body_link0"      class="visual"    material="openarm_body_link0_material"/>
-    <geom name="openarm_body_link0_collision" type="mesh" mesh="body_link0_symp" class="collision"/>
-
-    <frame pos="0 0 0.698">
-      <attach model="bimanual" prefix=""/>
-    </frame>
+    <attach model="arm_pedestal" prefix=""/>
 
     <body name="table" pos="0.27 0.0 0.36">
       <geom name="table_top" type="box" size="0.22 0.34 0.04" rgba="0.82 0.71 0.55 1"

@@ -10,15 +10,6 @@ synthetic pose source in headless tests).
 <mujoco model="openarm_v20_teleop">
   <compiler meshdir="assets" angle="radian"/>
 
-  <default>
-    <default class="visual">
-      <geom contype="0" conaffinity="0" group="2" />
-    </default>
-    <default class="collision">
-      <geom condim="3" conaffinity="1" priority="1" group="3" solref="0.005 1" friction="1 0.01 0.01" />
-    </default>
-  </default>
-
   <statistic center="0 0 0.9" extent="1.3" meansize="0.05"/>
   <option timestep="0.002" />
 
@@ -35,10 +26,7 @@ synthetic pose source in headless tests).
       markrgb="0.8 0.8 0.8" width="300" height="300"/>
     <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
 
-    <mesh name="body_link0"      content_type="model/stl" file="visual/body/body_link0.stl"        scale="0.001 0.001 0.001" />
-    <mesh name="body_link0_symp" content_type="model/stl" file="collision/body_link0_symp.stl"    scale="0.001 0.001 0.001" />
-
-    <model name="bimanual" file="openarm_v20_bimanual.xml"/>
+    <model name="arm_pedestal" file="openarm_pedestal.xml"/>
   </asset>
 
   <worldbody>
@@ -48,12 +36,7 @@ synthetic pose source in headless tests).
     <!-- Camera looking at the arms head-on (like a person standing in front). -->
     <camera name="frontcam" pos="1.7 0 1.15" xyaxes="0 -1 0 0 0 1" fovy="48"/>
 
-    <geom name="openarm_body_link0_visual"    type="mesh" mesh="body_link0"      class="visual"    material="openarm_body_link0_material" />
-    <geom name="openarm_body_link0_collision" type="mesh" mesh="body_link0_symp" class="collision" />
-
-    <frame pos="0 0 0.698">
-      <attach model="bimanual" prefix=""/>
-    </frame>
+    <attach model="arm_pedestal" prefix=""/>
   </worldbody>
 
   <keyframe>
