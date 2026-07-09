@@ -60,7 +60,11 @@ def _episode(model, data, bq, bdof, fadr, key, catcher, L, v0, steps=None):
     if not catcher.caught:
         return False
     near = np.linalg.norm(catcher.ball_pos() - catcher.grasp_pos())
-    return bool(catcher.ball_pos()[2] > 0.45 and near < 0.10 and data.qpos[fadr] > -0.45)
+    # fingers must be HELD APART by the ball: fully open is -0.7854, fully
+    # closed (on nothing) settles at ~0 -- both are failures. A gripped 70 mm
+    # ball leaves the finger joint in a mid band.
+    return bool(catcher.ball_pos()[2] > 0.45 and near < 0.10
+                and -0.45 < data.qpos[fadr] < -0.2)
 
 
 def _rate(model, data, addrs, key, catcher, n, seed, tf_range=(0.38, 0.60)):

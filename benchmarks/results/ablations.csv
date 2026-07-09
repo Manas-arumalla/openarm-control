@@ -1,5 +1,5 @@
 config,catch_rate
 full system,1.0
-no velocity matching,1.0
-weld at jaw entry,1.0
-no MPC replanning,0.1
+no velocity matching,0.95
+weld at jaw entry,0.05
+no MPC replanning,0.05

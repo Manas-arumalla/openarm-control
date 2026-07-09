@@ -232,8 +232,8 @@ mid-air catches across 4 seeds**, ~11 cm mean reach to the interception (the arm
 **The robot does not know where the ball is thrown** — it works the trajectory out
 as the ball flies. With `--vision` it observes the ball through **two RGB-D
 cameras** (detect → deproject → fuse → Kalman filter) instead of ground-truth
-state — fused estimate **~7 mm**, catch rate **9–10/10** (robust to +5 mm sensor
-noise). The robot's-eye view (detected ball crosshaired):
+state — fused estimate **~7 mm**, catch rate **10/10** up to 5 mm added sensor
+noise (8–9/10 out to 15 mm). The robot's-eye view (detected ball crosshaired):
 
 <p align="center"><img height="220" alt="What the catching camera sees" src="media/catch_camera_view.png" /></p>
 

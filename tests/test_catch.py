@@ -154,7 +154,7 @@ def test_dynamic_clean_catch():
         preposition_gap.append(np.linalg.norm(catcher.plan.p - gp0))
         near = np.linalg.norm(catcher.ball_pos() - catcher.grasp_pos())
         held = catcher.ball_pos()[2] > 0.45 and near < 0.10
-        gripped = data.qpos[fadr] > -0.45           # fingers closed off the open stop
+        gripped = -0.45 < data.qpos[fadr] < -0.2    # fingers held apart by the ball
         if held and gripped and ori_at_catch < 20:
             clean += 1
 
@@ -211,7 +211,7 @@ def test_vision_driven_catch():
             mujoco.mj_step(model, data)
         if catcher.caught:
             near = np.linalg.norm(catcher.ball_pos() - catcher.grasp_pos())
-            if catcher.ball_pos()[2] > 0.45 and near < 0.10 and data.qpos[fadr] > -0.45:
+            if catcher.ball_pos()[2] > 0.45 and near < 0.10 and -0.45 < data.qpos[fadr] < -0.2:
                 clean += 1
     assert clean >= 2, f"vision-driven clean catches {clean}/{N}"
 
