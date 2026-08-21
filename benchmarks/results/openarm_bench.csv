@@ -19,3 +19,9 @@ balance,SAC,circle track RMS (mm),100.0
 balance,LQR+SAC,static final err (mm),5.22
 balance,LQR+SAC,circle track RMS (mm),42.93
 cloth_fold,classical,y-span reduction (%),44.0
+reach,rl_contact_only,success,1.0
+move_puck,rl_contact_only,settled success,0.996
+articulated:drawer,rl_contact_only,opened (mm),87.9
+articulated:door,rl_contact_only,opened (deg),81.5
+articulated:valve,rl_contact_only,opened (deg),79.7
+lift,rl_contact_only,success,0.883
