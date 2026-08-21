@@ -1,5 +1,5 @@
 # Core (control, planning, bimanual). For extras use:  pip install -e ".[all]"
-mujoco==3.10.0
+mujoco==3.8.1
 numpy
 scikit-learn
 networkx
