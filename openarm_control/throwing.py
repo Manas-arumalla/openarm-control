@@ -187,6 +187,8 @@ class ThrowController:
             return False
         R = topdown_orientation(info["yaw"])
         above = self.king.inverse_kinematics(bp + [0, 0, 0.14], R, q_init=gq, restarts=8)
+        if above is None:          # hover pose unreachable within tolerance: no silent
+            return False           # NaN drive -- fail the grasp like the gs.solve check above
         self._move_to(above, 1.5, grip_closed=False, viewer=viewer)     # over the ball
         self._move_to(gq, 1.0, grip_closed=False, viewer=viewer)        # descend
         for _ in range(120):                                            # close + settle

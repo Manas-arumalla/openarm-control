@@ -12,10 +12,15 @@ license = { text = "Apache-2.0" }
 authors = [{ name = "Manas Reddy Arumalla", email = "manasreddyarumalla@gmail.com" }]
 keywords = ["robotics", "mujoco", "manipulation", "motion-planning", "reinforcement-learning", "openarm"]
 dependencies = [
-    "mujoco>=3.6.0",
+    # Pinned exact (not >=): contact-solver and actuator defaults have shifted
+    # across 3.6->3.10, and physics results (weld/grasp timing, benchmark
+    # numbers) are only guaranteed reproducible against the version they were
+    # measured on. Bump deliberately, and re-run the benchmarks, not by accident.
+    "mujoco==3.10.0",
     "numpy",
     "scikit-learn",   # PRM nearest-neighbors
     "networkx",       # PRM roadmap graph
+    "matplotlib",     # benchmarks/*.py figures (was undeclared -- ModuleNotFoundError on a clean install)
 ]
 
 [project.optional-dependencies]
